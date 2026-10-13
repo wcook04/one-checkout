@@ -38,6 +38,10 @@ class OneCheckoutTests(unittest.TestCase):
         self.git("config", "user.email", "fixture@example.invalid")
         self.git("config", "commit.gpgSign", "false")
         self.git("config", "core.hooksPath", str(Path(self.temp.name) / "no-hooks"))
+        # Metadata oracles must observe this test, not detached Git housekeeping.
+        # Set repository-local controls before even the first fixture commit.
+        self.git("config", "maintenance.auto", "false")
+        self.git("config", "gc.auto", "0")
         self.base = "".join(f"line {i:02d}\n" for i in range(25))
         (self.repo / "shared.py").write_text(self.base)
         (self.repo / "foreign.txt").write_text("foreign base\n")
@@ -73,6 +77,27 @@ class OneCheckoutTests(unittest.TestCase):
     def metadata(self) -> dict[str, bytes]:
         return {str(p.relative_to(self.repo / ".git")): p.read_bytes()
                 for p in (self.repo / ".git").rglob("*") if p.is_file()}
+
+    def test_fixture_commits_do_not_start_automatic_maintenance(self) -> None:
+        # Aggressive ambient settings exercise a real maintenance task. Keep its
+        # positive control synchronous and confined to this disposable repository.
+        config = Path(self.temp.name) / "maintenance-global.config"
+        config.write_text(
+            '[maintenance]\n auto = true\n autoDetach = false\n'
+            '[maintenance "gc"]\n enabled = false\n'
+            '[maintenance "loose-objects"]\n enabled = true\n auto = -1\n'
+            '[gc]\n auto = 1\n autoDetach = false\n'
+        )
+        env = {"GIT_CONFIG_GLOBAL": str(config), "GIT_CONFIG_NOSYSTEM": "1"}
+        packs = self.repo / ".git/objects/pack"
+        self.assertEqual(list(packs.glob("*.pack")), [])
+        self.git("commit", "--allow-empty", "-qm", "isolated fixture", env=env)
+        self.assertEqual(list(packs.glob("*.pack")), [],
+                         "ordinary fixture commits must not start automatic housekeeping")
+        # Prove that the injected task actually runs if maintenance is re-enabled.
+        self.git("-c", "maintenance.auto=true", "commit", "--allow-empty", "-qm",
+                 "positive maintenance control", env=env)
+        self.assertTrue(list(packs.glob("*.pack")), "positive maintenance control did not run")
 
     def test_same_file_foreign_stage_and_unowned_hunks_survive(self) -> None:
         staged_b = self.base.replace("line 12\n", "B staged\n")

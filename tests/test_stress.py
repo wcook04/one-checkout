@@ -76,6 +76,79 @@ class StressTests(unittest.TestCase):
         self.assertEqual(snapshot.read_bytes(), original)
         self.assertNotEqual(snapshot.read_bytes(), source.read_bytes())
 
+    def test_uncertain_native_commit_is_attention_and_corruption_still_fails(self):
+        fixture = stress.Fixture(self.root / "uncertain", *stress.generated_models(2))
+        spec = importlib.util.spec_from_file_location("uncertain_target", self.tool)
+        core = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(core)
+        read_ack = core._read_ack
+
+        def lose_native_ack(process, timeout):
+            ack = read_ack(process, timeout)
+            if ack == b"commit: ok\n":
+                raise core.Refusal("git_timeout", "Synthetic acknowledgement lost after native commit")
+            return ack
+
+        with mock.patch.dict(os.environ, fixture.env, clear=True), \
+                mock.patch.object(tempfile, "tempdir", str(fixture.root)), \
+                mock.patch.object(core, "_read_ack", lose_native_ack):
+            receipt = core.commit_patch(repo=fixture.repo, patch=fixture.patch.read_bytes(),
+                                        paths=fixture.changed, expected_parent=fixture.parent,
+                                        message="Synthetic native lost acknowledgement")
+        result = {"receipt": receipt, "exit_code": 3}
+
+        def classify():
+            oracle = fixture.check(receipt, full=True)
+            oracle["checks"]["committed_receipt"] = receipt["status"] == "committed"
+            return stress.successful_case_outcome(fixture, result, oracle)
+
+        row = classify()
+        self.assertEqual(row["classification"], "operational_uncertainty", row)
+        self.assertTrue(row["oracle"]["index_original_bytes_exact"])
+        self.assertEqual(stress.summary_classification([row]), "attention_required")
+        self.assertEqual(row["worker"]["receipt"]["status"], "landing_uncertain")
+        self.assertFalse(row["successful_settlement_checks"]["committed_receipt"])
+        index = fixture.repo / ".git/index"
+        original_index = index.read_bytes()
+        fixture.g("update-index", "--force-remove", "--", "foreign-new")
+        self.assertEqual(classify()["classification"], "invariant_failure")
+        index.write_bytes(original_index)
+        working = fixture.repo / "shared.txt"
+        original_working = working.read_bytes()
+        working.write_bytes(b"unexpected working bytes\n")
+        self.assertEqual(classify()["classification"], "invariant_failure")
+        working.write_bytes(original_working)
+        candidate = receipt["new_commit"]
+        wrong_tree = fixture.g("rev-parse", fixture.parent + "^{tree}").stdout.decode().strip()
+        wrong_head = fixture.g("commit-tree", wrong_tree, "-p", fixture.parent,
+                               data=b"Synthetic wrong tree").stdout.decode().strip()
+        fixture.g("update-ref", "HEAD", wrong_head, candidate)
+        self.assertEqual(classify()["classification"], "invariant_failure")
+        fixture.g("update-ref", "HEAD", candidate, wrong_head)
+        fixture.g("update-ref", "refs/heads/other", candidate)
+        fixture.g("symbolic-ref", "HEAD", "refs/heads/other")
+        self.assertEqual(classify()["classification"], "invariant_failure")
+        fixture.g("symbolic-ref", "HEAD", fixture.before["branch"])
+        receipt["ref_update_confirmed"] = True
+        self.assertEqual(classify()["classification"], "invariant_failure")
+        receipt["ref_update_confirmed"] = False
+        self.assertEqual(classify()["classification"], "operational_uncertainty")
+        receipt.update(status="landed_unsettled", ref_update_confirmed=True)
+        self.assertEqual(classify()["classification"], "operational_uncertainty")
+        for path in fixture.changed:
+            if fixture.staged.get(path) == fixture.base.get(path):
+                entry = fixture.candidate.get(path)
+                if entry:
+                    fixture.g("update-index", "--add", "--cacheinfo", entry[0],
+                              stress.blob_id(entry[1]), path)
+                else:
+                    fixture.g("update-index", "--force-remove", "--", path)
+        settled = classify()
+        self.assertEqual(settled["classification"], "operational_uncertainty", settled)
+        self.assertFalse(settled["oracle"]["index_original_bytes_exact"])
+        fixture.g("update-index", "--assume-unchanged", "--", "foreign-new")
+        self.assertEqual(classify()["classification"], "invariant_failure")
+
     def test_fixture_timeout_is_reported_without_claiming_runtime_exercise(self):
         args = argparse.Namespace(scratch=self.root, tool=self.tool, mode="generated",
                                   output=self.root / "timeout.json", seed=0, seeds=1,

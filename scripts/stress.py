@@ -257,8 +257,19 @@ class Fixture:
     def observe(self) -> dict:
         raw_tree = self.g("ls-tree", "-r", "--full-tree", "-z", "HEAD").stdout
         raw_index = self.g("ls-files", "--stage", "-z").stdout
+        debug = self.g("ls-files", "--debug", "-z").stdout
+        flags, offset = {}, 0
+        while offset < len(debug):
+            end = debug.index(b"\0", offset)
+            path = debug[offset:end]
+            flag_start = debug.index(b"flags: ", end) + len(b"flags: ")
+            offset = debug.index(b"\n", flag_start) + 1
+            semantic = int(debug[flag_start:offset - 1], 16) & 0x60008000
+            if semantic:
+                flags[path] = semantic
         return {"head": self.g("rev-parse", "HEAD").stdout.decode().strip(),
-                "tree": read_entries(raw_tree, True), "index": read_entries(raw_index),
+                "branch": self.g("symbolic-ref", "--quiet", "HEAD").stdout.decode().strip(),
+                "tree": read_entries(raw_tree, True), "index": read_entries(raw_index), "semantic_flags": flags,
                 "working": working_model(self.repo), "index_bytes": (self.repo / ".git/index").read_bytes(),
                 "locks": locks(self.repo), "raw_tree_sha256": digest(raw_tree), "raw_index_sha256": digest(raw_index)}
 
@@ -291,6 +302,7 @@ class Fixture:
                 "actual_tree": summarise(actual["tree"], full),
                 "expected_index": summarise(entry_model(expected_index, self.algorithm), full),
                 "actual_index": summarise(actual["index"], full), "head": actual["head"],
+                "index_before_sha256": digest(self.before["index_bytes"]),
                 "index_bytes_sha256": digest(actual["index_bytes"]), "locks": actual["locks"],
                 "raw_tree_sha256": actual["raw_tree_sha256"], "raw_index_sha256": actual["raw_index_sha256"]}
 
@@ -426,13 +438,72 @@ def outcome(oracle: dict, **extra) -> dict:
             "oracle": oracle, **extra}
 
 
+def successful_case_outcome(model: Fixture, result: dict, oracle: dict, **extra) -> dict:
+    """Keep conservative operational outcomes distinct from violated invariants.
+
+    This is for cases expecting a successful commit, without a competing ref
+    writer. Attention is never success. Native Git observations must establish
+    the candidate, original branch, permitted HEAD/index and unchanged working
+    bytes; a receipt by itself cannot excuse unexpected state.
+    """
+    fixture = model
+    receipt = result["receipt"]
+    status = receipt.get("status")
+    if result.get("exit_code") != 3 or status not in ("landing_uncertain", "landed_unsettled"):
+        oracle["checks"]["successful_worker_exit"] = result.get("exit_code") == 0
+        return outcome(oracle, worker=result, **extra)
+    actual = fixture.observe()
+    candidate = receipt.get("new_commit")
+    valid_oid = (isinstance(candidate, str) and len(candidate) in (40, 64)
+                 and all(c in "0123456789abcdef" for c in candidate))
+    candidate_tree, candidate_parents = {}, []
+    if valid_oid:
+        tree = fixture.g("ls-tree", "-r", "--full-tree", "-z", candidate, check=False)
+        parents = fixture.g("rev-list", "--parents", "-n", "1", candidate, check=False)
+        if tree.returncode == 0:
+            candidate_tree = read_entries(tree.stdout, True)
+        if parents.returncode == 0:
+            candidate_parents = parents.stdout.decode().split()[1:]
+    confirmed = status == "landed_unsettled"
+    head_permitted = actual["head"] == candidate or (not confirmed and actual["head"] == fixture.parent)
+    landed = actual["head"] == candidate
+    original_index = (actual["index_bytes"] == fixture.before["index_bytes"]
+                      and actual["index"] == fixture.before["index"])
+    # An acknowledged commit can report a later cleanup problem after I1 was
+    # published. The settled index model still has to pass the ordinary oracle.
+    settled_index = (confirmed and oracle["checks"].get("index_entries_exact") is True
+                     and actual["semantic_flags"] == fixture.before["semantic_flags"])
+    checks = {"truthful_outcome_receipt": receipt.get("ref_update_confirmed") is confirmed,
+              "receipt_branch_parent_exact": receipt.get("branch") == fixture.before["branch"] and receipt.get("parent") == fixture.parent,
+              "receipt_patch_scope_exact": receipt.get("patch_sha256") == digest(fixture.patch.read_bytes()) and receipt.get("changed_paths") == fixture.changed,
+              "candidate_tree_exact": candidate_tree == entry_model(fixture.candidate, fixture.algorithm),
+              "candidate_parent_exact": candidate_parents == [fixture.parent],
+              "head_permitted": head_permitted,
+              "branch_identity_exact": actual["branch"] == fixture.before["branch"],
+              "tree_exact": actual["tree"] == entry_model(fixture.candidate if landed else fixture.base, fixture.algorithm),
+              "index_permitted": original_index or settled_index,
+              "semantic_index_flags_preserved": actual["semantic_flags"] == fixture.before["semantic_flags"],
+              "working_bytes_and_modes_exact": actual["working"] == fixture.working,
+              "no_remaining_locks": not actual["locks"]}
+    for key in ("foreign_extended_flag_preserved", "requested_version_really_exercised", "real_signature_verified", "receipt_path_bytes_roundtrip"):
+        if key in oracle["checks"]:
+            checks[key] = oracle["checks"][key]
+    return {"classification": "operational_uncertainty" if all(checks.values()) else "invariant_failure",
+            "oracle": {"checks": checks, "index_original_bytes_exact": original_index,
+                       "index_before_sha256": digest(fixture.before["index_bytes"]),
+                       "index_after_sha256": digest(actual["index_bytes"]),
+                       "actual_index": summarise(actual["index"], True), "head": actual["head"],
+                       "branch": actual["branch"]},
+            "successful_settlement_checks": oracle["checks"], "worker": result, **extra}
+
+
 def generated_case(root: Path, tool: Path, seed: int, timeout: float = 15, algorithm="sha1", name_profile="portable") -> dict:
     fixture = Fixture(root, *generated_models(seed, name_profile=name_profile), seed=seed, algorithm=algorithm)
     result = run_client(fixture, tool, timeout)
     oracle = fixture.check(result["receipt"], full=True)
     oracle["checks"]["committed_receipt"] = result["receipt"]["status"] == "committed"
     oracle["checks"]["no_remaining_locks"] = not locks(fixture.repo)
-    return outcome(oracle, case="generated", seed=seed, algorithm=algorithm, name_profile=name_profile, worker=result,
+    return successful_case_outcome(fixture, result, oracle, case="generated", seed=seed, algorithm=algorithm, name_profile=name_profile,
                    patch_sha256=digest(fixture.patch.read_bytes()), fixture=str(root))
 
 
@@ -667,12 +738,12 @@ def benchmark_case(root: Path, tool: Path, count: int, selected: int, density: f
         oracle["checks"]["committed_receipt"] = result["receipt"]["status"] == "committed"
         if signing:
             oracle["checks"]["real_signature_verified"] = fixture.g("verify-commit", "HEAD", check=False).returncode == 0
-        return outcome(oracle, case="benchmark", tracked=count, selected=selected, foreign_density=density,
+        return successful_case_outcome(fixture, result, oracle, case="benchmark", tracked=count, selected=selected, foreign_density=density,
                        payload_bytes=patch_bytes, signing_delay_seconds=signing_delay,
                        signing_format=signing["format"] if signing else None,
                        patch_bytes=fixture.patch.stat().st_size, fixture_setup_seconds=setup_elapsed,
                        invocation_wall_seconds=wall, object_growth={k: after_objects[k] - before_objects[k] for k in before_objects},
-                       worker=result, fixture=str(root))
+                       fixture=str(root))
     finally:
         close_signer(fixture)
 
@@ -702,11 +773,16 @@ def compare_case(root: Path, tool: Path, arm: str, timeout: float = 15) -> dict:
               "working_bytes_unchanged": after["working"] == fixture.working}
     # A path commit is an explicit negative control, not a bug in Git.
     expected = all(checks.values()) if arm != "native_path_commit" else not checks["candidate_tree_exact"]
-    return {"case": "workflow_comparison", "arm": arm, "classification": "pass" if expected else "invariant_failure",
+    row = {"case": "workflow_comparison", "arm": arm, "classification": "pass" if expected else "invariant_failure",
             "checks": checks, "elapsed_seconds": elapsed, "worktree_setup_seconds": setup_seconds,
             "original_branch_advanced": after["head"] != fixture.parent, "candidate": candidate,
             "actual_candidate_tree": summarise(actual_tree, True), "fixture": str(root),
             "comparison_limit": "Worktree produces the same selected commit tree but does not land on the original branch. No speed-win claim is valid."}
+    if arm == "one_checkout":
+        checks["committed_receipt"] = result["receipt"]["status"] == "committed"
+        return successful_case_outcome(fixture, result, {"checks": checks},
+                                       **{key: value for key, value in row.items() if key != "classification"})
+    return row
 
 
 
@@ -730,7 +806,8 @@ def compatibility_case(root: Path, tool: Path, kind: str, timeout: float = 15) -
         oracle = fixture.check(receipt)
         oracle["checks"]["cli_succeeded"] = result.returncode == 0
         oracle["checks"]["receipt_path_bytes_roundtrip"] = sorted(os.fsencode(p) for p in receipt.get("changed_paths", [])) == sorted(os.fsencode(p) for p in names)
-        return outcome(oracle, case=kind, command=argv, exit_code=result.returncode, receipt=receipt, fixture=str(root))
+        return successful_case_outcome(fixture, {"receipt": receipt, "exit_code": result.returncode}, oracle,
+                                       case=kind, command=argv, exit_code=result.returncode, receipt=receipt, fixture=str(root))
     fixture = Fixture(root, *simple_models())
     expected_code = None
     if kind.startswith("index_v"):
@@ -766,6 +843,9 @@ def compatibility_case(root: Path, tool: Path, kind: str, timeout: float = 15) -
     if kind == "index_v3":
         oracle["checks"]["foreign_extended_flag_preserved"] = fixture.g("ls-files", "-v", "--", "foreign").stdout.startswith(b"S ")
     oracle["checks"]["expected_disposition"] = (result["receipt"].get("code") == expected_code) if refused else result["receipt"]["status"] == "committed"
+    if not refused:
+        return successful_case_outcome(fixture, result, oracle, case=kind, expected_refusal=expected_code,
+                                       index_version_before=observed_index_version, fixture=str(root))
     return outcome(oracle, case=kind, expected_refusal=expected_code, index_version_before=observed_index_version,
                    worker=result, fixture=str(root))
 

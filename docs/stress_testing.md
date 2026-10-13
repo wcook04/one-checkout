@@ -11,6 +11,17 @@ per-command deadline. `--timeout` bounds the instrumented worker; the runtime's
 limit. A `fixture_timeout` occurs outside the measured runtime and is reported
 separately from a worker timeout or invariant failure.
 
+Cases expecting successful settlement can instead observe an honest exit-3
+`landing_uncertain` or `landed_unsettled` receipt, for example after Git's
+acknowledgement deadline expires. The harness checks the candidate tree and
+parent, original branch identity, permitted HEAD/index states, working bytes
+and remaining locks independently. Verified conservative outcomes are
+`operational_uncertainty`: the run needs attention, exits nonzero, and does not
+count them as passing runtime cases. Unexpected state remains an
+`invariant_failure`. Unconfirmed publication requires the original index bytes;
+an acknowledged commit may retain them or have settled the expected index
+before a later cleanup error.
+
 ```sh
 python3 -m unittest discover -s tests -v
 mkdir -p /path/on/test-disk/oc-scratch

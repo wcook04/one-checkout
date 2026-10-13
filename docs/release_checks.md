@@ -4,6 +4,15 @@ A check definition is not a passing run. Record exact commit, Python/Git/host
 versions, command, exit status and evidence for the tree you intend to release.
 Local unit tests, hosted CI and actual agent use are separate observations.
 
+The [Check workflow](https://github.com/wcook04/one-checkout/actions/workflows/ci.yml)
+exercises Ubuntu 24.04 with Python 3.10, 3.13 and 3.15, and macOS 15 with
+Python 3.13 and 3.15. It checks empty-home installations, both layout views,
+installed copies and native Git backends. Python 3.10 is a compatibility floor;
+use a maintained Python release for new installations. Workflow security and
+Python error checks use pinned development tools; they are not runtime dependencies.
+Use the exact commit's completed run, not the current default-branch badge, as
+release evidence. Unsupported backend or filename cases remain explicit skips.
+
 ## Maintainer checks
 
 ```sh

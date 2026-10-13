@@ -35,9 +35,10 @@ Neither option redirects an intentional installation's destination.
 
 ## Fresh committed clone, with no user installation
 
-Run this from the root of a clean, committed local copy. It clones that exact
-commit rather than relying on an invented public repository URL. Uncommitted
-changes are not part of a clone. The subshell deletes only the directory it
+Run this from the root of a clean, committed local copy, obtained through the
+[versioned GitHub clone instructions](../README.md) or your development checkout.
+It clones that exact local commit; uncommitted changes are not part of a clone.
+The subshell deletes only the directory it
 creates with `mktemp`; it does not change the original checkout.
 
 ```sh
@@ -62,8 +63,9 @@ creates with `mktemp`; it does not change the original checkout.
 )
 ```
 
-A published clone command belongs here only after the operator has created and
-verified the real remote. Do not substitute a plausible owner or URL.
+For release verification, check that `git rev-parse HEAD` matches the commit
+listed on the [release page](https://github.com/wcook04/one-checkout/releases).
+Hosted checks are available in [GitHub Actions](https://github.com/wcook04/one-checkout/actions/workflows/ci.yml).
 
 ## Deliberate use in an agent
 
