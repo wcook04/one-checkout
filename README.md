@@ -1,27 +1,78 @@
 # One Checkout
 
-Commit one reviewed change without disturbing other work in a shared Git checkout.
+Commit one agent's fix without including another agent's unfinished edits.
 
-One Checkout is a Python command and an installable skill for **Claude Code and
-Codex**. Give it a patch, the exact files it may change, and the commit that patch
-was prepared against. It commits that patch while preserving other staged changes
-and leaving working files untouched. You supply the ownership evidence; the tool
-checks the Git operation.
+When **Claude Code, Codex, or several agent sessions share one project folder**,
+their edits can end up mixed together. One Checkout helps you save a specific,
+reviewed change as a Git commit without including the other edits or rearranging
+the files everyone is working on.
 
-**Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
-Python standard library and Git. It needs no server or model credentials.
-
+[The problem](#the-problem) · [What it does](#what-one-checkout-does) ·
 [Install](#install-for-claude-code-and-codex) · [Ask your agent](#use-it-with-your-agent) ·
 [Try the demo](#try-it-before-installing) · [Direct CLI](#review-and-commit-a-patch) ·
 [Outcomes](#outcomes-and-recovery) · [Limits](#boundaries) ·
 [Architecture and contributing](#verify-and-contribute) · [License](#license)
 
+## The problem
+
+Imagine three tasks have changed the same file, `auth.py`:
+
+| Work in the file | Ready to commit? |
+|---|---|
+| Claude fixed the expired-token check | Yes: you reviewed this fix |
+| Codex started a permissions refactor | No: it is half-finished, with some edits already staged |
+| You added temporary debugging output | No: keep it local |
+
+You want a commit containing **only the token fix**. The refactor and debugging
+output need to stay exactly where they are so everyone can keep working.
+
+Git has one shared **staging area**—the changes prepared for the next commit—in
+that project folder. It does not maintain a separate staging area for each agent
+or know which task an edit belongs to. `git add .` can gather everyone's changes.
+Selecting just `auth.py` still includes multiple tasks, and an ordinary
+`git commit` includes whatever is already staged. Stashing or resetting work to
+get it out of the way changes the files or staging that other sessions are using.
+
+This is the problem One Checkout addresses: **making one specific commit from a
+folder that contains several people's or agents' unfinished changes.**
+
+## What One Checkout does
+
+You or your agent first prepare a **reviewed patch**: a diff containing exactly
+the edits you intend to commit. In the example, that patch contains the token fix
+and nothing from the refactor or debugging work.
+
+One Checkout uses that patch to build and commit the selected change separately
+from the shared staging area. It checks the allowed files and the starting commit,
+preserves other staged changes, and leaves every working file untouched. If the
+branch has moved since the patch's captured starting commit, it refuses so you
+can review the new situation.
+
+After a successful commit, Git history contains the token fix. The working file
+still contains the token fix, unfinished refactor and debugging output. Other
+people's staged changes remain staged.
+
+**There is a handoff to review:** preserved staging can still contain the old
+version of the token check. A later ordinary commit of that staging could undo
+the fix. One Checkout reports this and tells the next writer to review it; it
+does not silently rewrite someone else's staged work. See
+[staging handoff](docs/staging_handoff.md).
+
+The package is a small Python command plus a skill that teaches **Claude Code and
+Codex** how to use it and interpret the result. Git supplies the underlying
+mechanism; One Checkout packages it with checks and recovery guidance for agents.
+
+**You still decide which edits belong in the commit.** It cannot recover authorship
+from a mixed file, stop agents overwriting each other's edits, or make unfinished
+code correct. It is useful when you deliberately share one project folder and
+can identify the change to commit. For separate editing environments, use Git
+worktrees; for an ordinary single-owner commit, normal Git is usually simpler.
+See [choosing a workflow](docs/choosing_a_workflow.md).
+
 ## Install for Claude Code and Codex
 
-Use this when collaborators intentionally share a checkout and already have a
-reviewed patch to commit. Use separate worktrees when they need independent
-working files. For a single owner with no mixed changes, ordinary Git is usually
-simpler. See [choosing a workflow](docs/choosing_a_workflow.md).
+**Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
+Python standard library and Git. It needs no server or model credentials.
 
 ```sh
 git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
