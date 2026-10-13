@@ -46,6 +46,22 @@ command launches a model. Verify the visible skill and its source location in
 the host; reload skills or start a new session if necessary. A passed doctor is
 not evidence that an agent discovered or followed the instructions.
 
+## Host permissions and environment
+
+The agent needs ordinary permission to write the target repository's Git metadata
+and its external patch/receipt directory. A successful installation grants no
+such permission. Use the host's normal scoped approval controls; do not disable
+the sandbox to make a commit succeed.
+
+The runtime refuses inherited `GIT_*` controls other than author/committer identity.
+Read the named variables in an `unsafe_environment` refusal without exposing their
+values. Claude Code can inject `GIT_EDITOR` for each Bash command, even if it was
+absent when Claude started. For this editor-only preference, an explicit-message
+invocation can use `env -u GIT_EDITOR python3 "$TOOL" ...` after reviewing the refusal
+and confirming the same authorised patch, plan, parent and branch. Remove it for
+that command only; preserve the host's settings. Other Git controls require their
+own review. Environment repair does not justify retrying an uncertain landing.
+
 ## Reviewed source and explicit bundle
 
 `skills/one-checkout/bundle.json` is the explicit payload inventory. Missing or

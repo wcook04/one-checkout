@@ -12,6 +12,11 @@ The invocation needs ordinary Git metadata write permission; installation grants
 none. Inherited `GIT_*` controls other than author/committer identity are refused.
 Inspect an `unsafe_environment` refusal and use a reviewed, command-local
 environment; do not rewrite global settings or bypass the host's approval controls.
+Claude Code may inject `GIT_EDITOR` into each shell command. If that is the
+reported control, its editor preference is unnecessary for an explicit-message
+commit: use `env -u GIT_EDITOR python3 "$TOOL" ...` for a newly reviewed invocation.
+Changing the launcher environment alone may not remove a host-injected variable.
+Other reported controls need their own review; never clear them all blindly.
 
 ## Authorise and select
 
