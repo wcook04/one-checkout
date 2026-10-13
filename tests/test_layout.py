@@ -151,5 +151,72 @@ class Layout(unittest.TestCase):
                 check(Path(raw).resolve())
 
 
+    def test_required_owner_symlink_is_not_a_regular_interface(self):
+        target = self.root / 'outside-guide'
+        target.write_text('run gate')
+        self.write('.gitignore', '/build/\noutside-guide\n')
+        (self.root / 'README.md').unlink()
+        (self.root / 'README.md').symlink_to(target)
+        self.assertTrue(any('regular file' in e for e in check(self.root)))
+
+    def test_staged_symlink_is_not_hidden_by_a_worktree_repair(self):
+        target = self.root / 'outside-guide'
+        target.write_text('run gate')
+        self.write('.gitignore', '/build/\noutside-guide\n')
+        (self.root / 'README.md').unlink()
+        (self.root / 'README.md').symlink_to(target)
+        self.git('add', 'README.md', '.gitignore')
+        (self.root / 'README.md').unlink()
+        self.write('README.md', 'run gate')
+        self.assertEqual(check(self.root), [])
+        self.assertTrue(any('regular file' in e for e in check(self.root, index=True)))
+
+    def test_unstaged_symlink_does_not_change_the_staged_type(self):
+        target = self.root / 'outside-guide'
+        target.write_text('run gate')
+        self.write('.gitignore', '/build/\noutside-guide\n')
+        (self.root / 'README.md').unlink()
+        (self.root / 'README.md').symlink_to(target)
+        self.assertTrue(check(self.root))
+        self.assertEqual(check(self.root, index=True), [])
+
+    def test_policy_symlink_is_not_followed_in_either_view(self):
+        policy = self.root / 'docs/repository_layout.json'
+        target = self.root / 'outside-policy'
+        policy.rename(target)
+        policy.symlink_to(target)
+        with self.assertRaisesRegex(ValueError, 'regular file'):
+            check(self.root)
+        self.git('add', 'docs/repository_layout.json')
+        policy.unlink()
+        policy.write_bytes(target.read_bytes())
+        with self.assertRaisesRegex(ValueError, 'regular file'):
+            check(self.root, index=True)
+
+    def test_regular_file_role_rejects_symlinks_but_accepts_new_resources(self):
+        self.policy['directories']['docs']['regular_files_only'] = True
+        self.write('docs/repository_layout.json', json.dumps(self.policy))
+        self.write('docs/new.md', 'legitimate resource')
+        self.assertEqual(check(self.root), [])
+        (self.root / 'docs/link.md').symlink_to('new.md')
+        self.assertTrue(any('regular file' in e for e in check(self.root)))
+        self.git('add', 'docs')
+        self.assertTrue(any('regular file' in e for e in check(self.root, index=True)))
+
+    def test_regular_file_role_setting_must_be_boolean(self):
+        self.policy['directories']['docs']['regular_files_only'] = 'yes'
+        with self.assertRaises(ValueError):
+            validate_policy(self.policy)
+
+    def test_symlinked_parent_does_not_supply_a_worktree_owner(self):
+        docs = self.root / 'docs'
+        outside = self.root / 'external-docs'
+        docs.rename(outside)
+        docs.symlink_to(outside, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, 'regular file'):
+            check(self.root)
+        self.assertEqual(check(self.root, index=True), [])
+
+
 if __name__ == '__main__':
     unittest.main()

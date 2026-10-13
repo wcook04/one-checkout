@@ -1,0 +1,12 @@
+{
+  "schema": "one_checkout_bundle_v1",
+  "members": [
+    "SKILL.md",
+    "LICENSE",
+    "scripts/one_checkout.py",
+    "scripts/demo.py",
+    "scripts/doctor.py",
+    "references/patch-selection.md",
+    "references/recovery.md"
+  ]
+}

@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path, PurePosixPath
 import subprocess
+import stat
 
 
 def git(root: Path, *args: str) -> bytes:
@@ -20,6 +21,35 @@ def candidates(root: Path, index: bool) -> set[str]:
         args += ['--others', '--exclude-standard']
     paths = {p.decode('utf-8', 'surrogateescape') for p in git(root, *args).split(b'\0') if p}
     return paths if index else {p for p in paths if (root / p).is_file() or (root / p).is_symlink()}
+
+
+def regular_files(root: Path, paths: set[str], index: bool) -> set[str]:
+    """Use selected-view types; never dereference a worktree interface symlink."""
+    if index:
+        regular = set()
+        for record in git(root, 'ls-files', '--stage', '-z').split(b'\0'):
+            if not record:
+                continue
+            metadata, path = record.split(b'\t', 1)
+            mode, _, stage = metadata.split()
+            if stage == b'0' and mode in (b'100644', b'100755'):
+                regular.add(path.decode('utf-8', 'surrogateescape'))
+        return regular & paths
+    regular = set()
+    for path in paths:
+        current = root
+        try:
+            for part in PurePosixPath(path).parts:
+                current = current / part
+                mode = current.lstat().st_mode
+                if stat.S_ISLNK(mode):
+                    break
+            else:
+                if stat.S_ISREG(mode):
+                    regular.add(path)
+        except (FileNotFoundError, NotADirectoryError):
+            pass
+    return regular
 
 
 def read(root: Path, path: str, index: bool) -> str:
@@ -51,6 +81,8 @@ def validate_policy(policy: dict) -> None:
             raise ValueError('each directory needs a relative path and nonempty purpose')
         if '/' in name and policy['schema'] == 'repository_layout@1':
             raise ValueError('nested directory declarations require repository_layout@2')
+        if 'regular_files_only' in role and not isinstance(role['regular_files_only'], bool):
+            raise ValueError(name + ': regular_files_only must be boolean')
         for key in ('suffixes', 'filenames'):
             if key in role and (not isinstance(role[key], list) or any(not isinstance(v, str) for v in role[key])):
                 raise ValueError(name + ': ' + key + ' must be a list of strings')
@@ -70,12 +102,22 @@ def inspect(root: Path, *, index: bool = False, config: str = 'docs/repository_l
     paths = candidates(root, index)
     if config not in paths:
         raise ValueError('layout policy is missing from the selected Git view: ' + config)
+    regular = regular_files(root, paths, index)
+    if config not in regular:
+        raise ValueError('layout policy must be a regular file in the selected Git view: ' + config)
     policy = json.loads(read(root, config, index))
     validate_policy(policy)
     errors, warnings = [], []
     exceptions = policy.get('exceptions', {})
     roles = policy['directories']
     unknown = set()
+    protected = set(policy['required_files']) | set(policy['content_routes'])
+    protected.update(role['guide'] for role in roles.values() if role.get('guide'))
+    for name, role in roles.items():
+        if role.get('regular_files_only'):
+            protected.update(path for path in paths if path.startswith(name + '/'))
+    for path in sorted((protected & paths) - regular):
+        errors.append(path + ': expected a regular file in the selected Git view')
     for path in sorted(paths):
         parts = PurePosixPath(path).parts
         if len(parts) == 1:
@@ -107,6 +149,8 @@ def inspect(root: Path, *, index: bool = False, config: str = 'docs/repository_l
         if path not in paths:
             errors.append('missing route carrier: ' + path)
             continue
+        if path not in regular:
+            continue  # Already reported; do not read through a link or conflict.
         content = read(root, path, index)
         for fragment in fragments:
             if fragment not in content:

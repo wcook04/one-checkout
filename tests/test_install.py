@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import os
 import sys
 import tempfile
@@ -19,6 +20,7 @@ class InstallSkill(unittest.TestCase):
             path = self.source / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("source " + name)
+        (self.source / 'bundle.json').write_text(json.dumps({'schema':'one_checkout_bundle_v1', 'members':list(MEMBERS)}))
         self.destinations = [self.root / ".agents/skills/one-checkout",
                              self.root / ".claude/skills/one-checkout"]
 
@@ -80,7 +82,7 @@ class InstallSkill(unittest.TestCase):
         destination = self.destinations[0]
         destination.mkdir(parents=True)
         (destination / "custom.txt").write_text("keep this")
-        with patch("install.shutil.copy2", side_effect=OSError("copy failed")):
+        with patch("install.write_payload", side_effect=OSError("copy failed")):
             with self.assertRaises(OSError):
                 install_skill(self.source, [destination], backup_existing=True)
         self.assertEqual((destination / "custom.txt").read_text(), "keep this")

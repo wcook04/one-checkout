@@ -1,20 +1,117 @@
 {
   "schema": "repository_layout@2",
   "undeclared_directories": "error",
-  "root_files": ["README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", ".gitignore", ".editorconfig", "plugin.json"],
+  "root_files": [
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    ".gitignore",
+    ".editorconfig",
+    "plugin.json"
+  ],
   "directories": {
-    "skills": {"purpose": "Self-contained Agent Skill and runtime", "guide": "skills/one-checkout/SKILL.md"},
-    "scripts": {"purpose": "Installation and package maintenance", "suffixes": [".py"]},
-    "tests": {"purpose": "Behavior tests using unittest", "suffixes": [".py"]},
-    "docs": {"purpose": "Authored package documentation and role policy", "suffixes": [".md", ".json"]},
-    ".claude-plugin": {"purpose": "Claude Code plugin manifest", "suffixes": [".json"]},
-    ".github": {"purpose": "Hosted CI configuration", "suffixes": [".yml", ".yaml"]}
+    "skills": {
+      "purpose": "Self-contained Agent Skill and runtime",
+      "guide": "skills/one-checkout/SKILL.md",
+      "regular_files_only": true
+    },
+    "scripts": {
+      "purpose": "Installation and package maintenance",
+      "suffixes": [
+        ".py"
+      ]
+    },
+    "tests": {
+      "purpose": "Behavior tests using unittest",
+      "suffixes": [
+        ".py"
+      ]
+    },
+    "docs": {
+      "purpose": "Authored package documentation and role policy",
+      "suffixes": [
+        ".md",
+        ".json"
+      ]
+    },
+    ".claude-plugin": {
+      "purpose": "Claude Code plugin manifest",
+      "suffixes": [
+        ".json"
+      ]
+    },
+    ".github": {
+      "purpose": "Hosted CI configuration",
+      "suffixes": [
+        ".yml",
+        ".yaml"
+      ]
+    }
   },
-  "required_files": ["README.md", "LICENSE", "plugin.json", ".claude-plugin/plugin.json", "skills/one-checkout/SKILL.md", "skills/one-checkout/LICENSE", "skills/one-checkout/scripts/one_checkout.py", "scripts/install.py", "scripts/demo.py", "scripts/check_layout.py", "tests/test_one_checkout.py", "tests/test_install.py", "tests/test_layout.py", "docs/repository_layout.json", "docs/provenance.md", ".github/workflows/ci.yml"],
+  "required_files": [
+    "README.md",
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "LICENSE",
+    "plugin.json",
+    ".claude-plugin/plugin.json",
+    "skills/one-checkout/SKILL.md",
+    "skills/one-checkout/LICENSE",
+    "skills/one-checkout/bundle.json",
+    "skills/one-checkout/scripts/one_checkout.py",
+    "skills/one-checkout/scripts/demo.py",
+    "skills/one-checkout/scripts/doctor.py",
+    "skills/one-checkout/references/patch-selection.md",
+    "skills/one-checkout/references/recovery.md",
+    "scripts/install.py",
+    "scripts/demo.py",
+    "scripts/try_install.py",
+    "scripts/compare_workflows.py",
+    "scripts/agent_eval.py",
+    "scripts/stress.py",
+    "scripts/stress_worker.py",
+    "scripts/check_layout.py",
+    "tests/test_one_checkout.py",
+    "tests/test_install.py",
+    "tests/test_install_lifecycle.py",
+    "tests/test_layout.py",
+    "tests/test_metadata.py",
+    "docs/repository_layout.json",
+    "docs/release_checks.md",
+    "docs/provenance.md",
+    ".github/workflows/ci.yml",
+    "docs/demo.md",
+    "docs/choosing_a_workflow.md",
+    "docs/staging_handoff.md",
+    "docs/installation.md",
+    "docs/architecture.md",
+    "docs/transaction_safety.md",
+    "docs/repository_guide.md",
+    "docs/evaluate.md",
+    "docs/agent_evaluation.md",
+    "docs/stress_testing.md",
+    "scripts/check_backends.py",
+    "docs/recovery_design.md"
+  ],
   "content_routes": {
-    "README.md": ["skills/one-checkout/scripts/one_checkout.py", "scripts/install.py", "scripts/demo.py", "scripts/check_layout.py", "docs/repository_layout.json"],
-    "AGENTS.md": ["skills/one-checkout/scripts/one_checkout.py", "CONTRIBUTING.md"],
-    ".github/workflows/ci.yml": ["unittest discover -s tests", "scripts/check_layout.py"]
+    "README.md": [
+      "skills/one-checkout/scripts/one_checkout.py",
+      "scripts/install.py",
+      "scripts/demo.py",
+      "scripts/check_layout.py",
+      "docs/repository_layout.json"
+    ],
+    "AGENTS.md": [
+      "skills/one-checkout/scripts/one_checkout.py",
+      "CONTRIBUTING.md"
+    ],
+    ".github/workflows/ci.yml": [
+      "unittest discover -s tests",
+      "scripts/check_layout.py"
+    ]
   },
   "exceptions": {}
 }

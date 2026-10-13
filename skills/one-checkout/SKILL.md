@@ -1,67 +1,82 @@
 ---
 name: one-checkout
-description: Commit an explicit patch and exact file paths in a shared Git checkout while preserving unrelated staged entries and working files. Use when several trusted agents or people share a checkout and need a scoped commit.
+description: Make a user-authorised, patch-scoped commit in a shared Git checkout, preserving other staged and working changes. Use for selected commits, not to infer ownership, isolate concurrent edits, or clean Git status.
 ---
 
 # One Checkout
 
-Use the bundled `scripts/one_checkout.py` with Python 3.10+ and Git on macOS
-or Linux. Resolve
-the script relative to this SKILL.md, then run it with `--repo` pointing at
-the target repository. This skill includes its implementation and has no
-dependency on the repository it was developed in.
+Resolve `scripts/one_checkout.py` relative to this file. Requires Python 3.10+
+and Git 2.39+ on macOS/Linux. Loading this skill is not permission to commit.
 
-Before committing, inspect the intended diff and current Git state. Write a
-patch that contains exactly the change the user authorized. Name each exact
-repository-relative file with a repeated `--path`; directories and globs are
-not accepted. Record the full expected parent OID once and keep it for both
-planning and committing.
+The invocation needs ordinary Git metadata write permission; installation grants
+none. Inherited `GIT_*` controls other than author/committer identity are refused.
+Inspect an `unsafe_environment` refusal and use a reviewed, command-local
+environment; do not rewrite global settings or bypass the host's approval controls.
+
+## Authorise and select
+
+Establish the authorised change, target repository/branch, full parent OID,
+and evidence for the A-only patch: a reviewed supplied patch, captured edit
+record, or an isolated reconstruction from that parent. A file path, the
+current diff, or an instruction to “commit my work” does not establish hunk
+ownership. When evidence is missing, ask for scope; do not guess.
+
+Never temporarily remove B/C from shared files to obtain A. For mixed edits,
+additions or deletions, read [patch selection](references/patch-selection.md).
+Keep the patch and receipts outside the checkout, in a unique private directory.
+
+## Plan, review, commit
+
+Use exact repository-relative files (repeat `--path`; no globs/directories).
+Capture `PARENT` once. Keep the successful plan; do not overwrite it during commit.
+Use a fresh external record path if retaining interruption evidence.
+`TOOL`, `REPO`, `PATCH`, `PLAN`, `RECORD`, `RECEIPT` and `ERROR` below are absolute paths
+resolved for this task, not literal placeholder filenames.
 
 ```sh
-python3 /path/to/this/skill/scripts/one_checkout.py plan \
-  --repo /path/to/repository --patch /path/to/owned.patch \
-  --path src/example.py --expected-parent FULL_PARENT_OID
-
-python3 /path/to/this/skill/scripts/one_checkout.py commit \
-  --repo /path/to/repository --patch /path/to/owned.patch \
-  --path src/example.py --expected-parent FULL_PARENT_OID \
-  --message "Describe this change"
+python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
+  --path src/example.py --expected-parent "$PARENT" > "$PLAN" 2> "$ERROR"
 ```
 
-`plan` validates the candidate without updating the branch or shared index.
-`commit --dry-run` is the same operation. Inspect the JSON receipt before
-calling `commit`; use `--message-file` for a longer commit message.
+Stop on a non-zero exit. Read the patch and JSON. Check the authorised branch,
+parent and exact scope. A successful plan validates a candidate, not ownership
+or tests. Only then, with commit authorisation:
 
-The patch is applied to a private index seeded from the expected parent.
-Working files are not patched or required to match that candidate. This
-allows other staged and unstaged hunks in the same file to survive. The
-shared index retains a foreign staged blob; after your commit it may show
-an apparent reversal of your change relative to the new HEAD. Inspect it,
-and do not reset or restage it to make status look clean.
+```sh
+python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
+  --path src/example.py --expected-parent "$PARENT" --plan-file "$PLAN" \
+  --record-file "$RECORD" --message "Describe the authorised change" > "$RECEIPT" 2> "$ERROR"
+```
 
-The commit holds the shared index lock and uses Git's prepared ref
-transaction to check the named branch and expected parent before landing.
-If HEAD advances or the selected branch changes, stop and inspect the new
-branch, parent and patch. A refusal is
-not permission to substitute the new HEAD and retry automatically. Split,
-sparse and unmerged indexes are refused in this version.
+`--plan-file` binds repository, branch, parent, patch bytes, paths and candidate
+tree. It does not reserve the checkout, bind the message, or grant authorisation.
+Never edit a plan or substitute a new HEAD to bypass a refusal. Review anew.
 
-Exit 2 is a refusal. Exit 3 returns a recovery receipt on stdout:
+## Interpret the result before another action
 
-- `landing_uncertain` with `ref_update_confirmed: false` means the commit
-  request was sent but success was not acknowledged. `new_commit` is a
-  candidate, not proof of landing. The original shared index is retained.
-- `landed_unsettled` means a confirmed commit has an index-settlement or
-  cleanup failure. Confirmed ref transactions with protocol cleanup failure
-  include `ref_update_confirmed: true`.
+| Exit / status | Next step |
+|---|---|
+| 2 / `refused` (stderr) | Read `code`; inspect the cause. No automatic retry. |
+| 0 / `planned` | Review patch and plan; no commit has landed. |
+| 0 / `committed` | Report `new_commit`. Leave other work alone. |
+| 3 / `landing_uncertain` | Candidate is not proof. Inspect the named branch/reflog before any retry. |
+| 3 / `landed_unsettled` | Commit landed. Inspect index/cleanup; do not recommit. |
+| 3 / `committed` with `receipt_delivery` (stderr) | Stdout failed after success. Inspect the fallback; do not recommit. |
 
-Inspect the branch and reflog against `new_commit`, current HEAD, shared
-index and any reported remaining locks or scratch before doing anything
-else. Do not rerun the commit or roll back another agent's work. A process
-interruption can require the same inspection even without a receipt.
+Capture stderr as well as stdout: failed stdout delivery can send the receipt
+to stderr without changing its status. For exit 3, interruption, missing JSON
+or an unfamiliar status, read
+[recovery](references/recovery.md) and stop mutating. No blind retry, rollback,
+lock deletion, `reset`, `stash`, `checkout`/`restore`, or restaging to tidy status.
+A preserved foreign staged blob can show an inverse of A against the new HEAD;
+that is expected, not corruption.
 
-The tool disables Git hooks for its invocations, including commit and
-reference-transaction hooks, without modifying repository configuration.
-It honors configured `commit.gpgSign`; signing tooling may be required. Run
-the project's required checks separately. This tool does not prove tests
-passed, claim a path lease, prevent filesystem edits or push a branch.
+Hooks are disabled; signing configuration is honoured. Run required policy/tests
+separately. Working files are never written. Use worktrees for editing isolation;
+this tool provides no leases, authorship inference, semantic validation or push.
+Split, sparse, unmerged and partial/promisor repositories are refused.
+Use `--git-timeout` for bounded per-command/protocol waits; a timeout after a
+commit request may still mean landing occurred.
+
+Run `scripts/doctor.py --self-test` relative to this skill to check prerequisites
+and the bundled disposable demo. This tests the installed code, not agent efficacy.

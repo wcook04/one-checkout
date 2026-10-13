@@ -1,0 +1,314 @@
+{
+  "schema": "one_checkout_prior_art_v1",
+  "as_of": "2026-10-13",
+  "search_boundary": "Public evidence available on 13 October 2026; not late-October or exhaustive novelty coverage.",
+  "method": "Trace mechanisms to Git docs; source-pinned implementation comparisons; public issue-to-workflow countercases; backward/forward paper and repository leads; falsifying local fixtures.",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "Git: git-commit",
+      "url": "https://git-scm.com/docs/git-commit",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Pathspec selection is file-scoped, not an A-only hunk selector; unrelated indexed paths are not automatically included.",
+      "does_not_establish": "Local fixture results apply to the recorded Git version, not every porcelain option or wrapper.",
+      "additional_urls": []
+    },
+    {
+      "id": "S02",
+      "title": "Git: git-update-ref",
+      "url": "https://git-scm.com/docs/git-update-ref",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Conditional reference updates and native prepare/commit protocol are pre-existing Git mechanisms.",
+      "does_not_establish": "Documentation is not an execution proof for every Git backend or crash boundary.",
+      "additional_urls": []
+    },
+    {
+      "id": "S03",
+      "title": "Git: git-commit-tree",
+      "url": "https://git-scm.com/docs/git-commit-tree",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Creating a commit from a tree is existing plumbing and does not establish project correctness.",
+      "does_not_establish": "No validation of One Checkout follows merely from using this command.",
+      "additional_urls": []
+    },
+    {
+      "id": "S04",
+      "title": "Git: environment variables",
+      "url": "https://git-scm.com/docs/git",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "GIT_INDEX_FILE and object-store controls underlie private-index workflows.",
+      "does_not_establish": "Private indexes alone do not provide complete concurrent landing or recovery.",
+      "additional_urls": []
+    },
+    {
+      "id": "S05",
+      "title": "Git: racy-git",
+      "url": "https://git-scm.com/docs/racy-git",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Index-file timestamps participate in racy-clean stat-cache protection. Supports investigation of the locally reproduced copy/publication defect.",
+      "does_not_establish": "The actual One Checkout defect and fix are established by the included before/after fixtures, not by this document alone.",
+      "additional_urls": []
+    },
+    {
+      "id": "S06",
+      "title": "Git: git-diff",
+      "url": "https://git-scm.com/docs/git-diff",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "An explicit old-parent cached diff and a default HEAD-relative cached diff answer different questions.",
+      "does_not_establish": "A correctly based diff does not establish authorship or candidate correctness.",
+      "additional_urls": []
+    },
+    {
+      "id": "S07",
+      "title": "Agentlocks: wrapped commit helper",
+      "url": "https://github.com/simke9445/agentlocks/blob/35d394595c3590d56c3ea45977f517ffb82288a9/src/cli/commands/wrapped.ts",
+      "revision": "35d394595c3590d56c3ea45977f517ffb82288a9",
+      "publication_date": "2026-06-05 (revision date reported by input packet)",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": "MIT, inspected pinned LICENSE",
+      "used_for": "Inspected advisory resource/index leases, lease refresh and git add/commit with selected paths.",
+      "does_not_establish": "No explicit patch/expected-parent interface observed in this helper. Agentlocks was not executed; do not generalise absence to every interface.",
+      "additional_urls": [
+        "https://github.com/simke9445/agentlocks/blob/35d394595c3590d56c3ea45977f517ffb82288a9/LICENSE"
+      ]
+    },
+    {
+      "id": "S08",
+      "title": "Worktrunk: parallel worktree workflow",
+      "url": "https://worktrunk.dev/",
+      "revision": "61b2609f1838600cc4b53b2624f5ace43547adb3",
+      "publication_date": "2026-10-13 (pinned commit)",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": "MIT OR Apache-2.0, inspected pinned LICENSE",
+      "used_for": "Separate working trees, create/start/merge/remove workflow and documented cache reuse are substantive alternatives.",
+      "does_not_establish": "Docs and pinned commit/licence inspected; Worktrunk was not installed, timed or compared end to end.",
+      "additional_urls": [
+        "https://github.com/max-sixty/worktrunk/commit/61b2609f1838600cc4b53b2624f5ace43547adb3",
+        "https://github.com/max-sixty/worktrunk/blob/61b2609f1838600cc4b53b2624f5ace43547adb3/LICENSE"
+      ]
+    },
+    {
+      "id": "S09",
+      "title": "Foremerge: JSON API, validation and acceptance",
+      "url": "https://github.com/naw103/foremerge/blob/577de84b5590d76c33e3450590826221b9914ff8/docs/json-api.md",
+      "revision": "577de84b5590d76c33e3450590826221b9914ff8",
+      "publication_date": "2026-10-04 (pinned commit)",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": "Apache-2.0, inspected pinned LICENSE",
+      "used_for": "ChangeSet fingerprints, trusted named checks and immutable validation attempts distinguish agent claims from current authoritative evidence.",
+      "does_not_establish": "Protocol documentation and source excerpts inspected, not an independent execution or security audit.",
+      "additional_urls": [
+        "https://github.com/naw103/foremerge/blob/577de84b5590d76c33e3450590826221b9914ff8/LICENSE"
+      ]
+    },
+    {
+      "id": "S10",
+      "title": "Foremerge: benchmark plan",
+      "url": "https://github.com/naw103/foremerge/blob/577de84b5590d76c33e3450590826221b9914ff8/docs/benchmark-plan.md",
+      "revision": "577de84b5590d76c33e3450590826221b9914ff8",
+      "publication_date": "2026-10-04 (pinned commit)",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Independent-work controls and distinction between deterministic correctness fixtures and productivity evaluation informed our comparison.",
+      "does_not_establish": "A proposed benchmark design is not measured comparative productivity.",
+      "additional_urls": []
+    },
+    {
+      "id": "S11",
+      "title": "GitButler: parallel agents",
+      "url": "https://docs.gitbutler.com/ai-agents/parallel-agents",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Documented shared workspace and per-task branch routing make GitButler close prior art.",
+      "does_not_establish": "Living documentation observed on the access date. It does not establish byte/entry equivalence to One Checkout, nor independent working-file isolation.",
+      "additional_urls": []
+    },
+    {
+      "id": "S12",
+      "title": "GitButler: but commit",
+      "url": "https://docs.gitbutler.com/commands/but-commit",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "CHANGES can select files or hunks, so selected-hunk commits are not a novel product category here.",
+      "does_not_establish": "No executable GitButler comparison was run. Default all-changes behaviour is not the only supported selection mode.",
+      "additional_urls": []
+    },
+    {
+      "id": "S13",
+      "title": "GitButler: pinned commit tests and licence",
+      "url": "https://github.com/gitbutlerapp/gitbutler/blob/409a85979c264ab6542018d4df503eff57a0f9ad/crates/but/tests/but/command/commit.rs",
+      "revision": "409a85979c264ab6542018d4df503eff57a0f9ad",
+      "publication_date": "2026-10-13T19:03:41Z",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": "Root LICENSE.md: FSL-1.1-MIT",
+      "used_for": "Inspected test source includes single-branch operation without the managed workspace ref; root licence inspected separately. Do not assume every use requires a workspace migration.",
+      "does_not_establish": "Only bounded source excerpts inspected, not the complete implementation or a run. No implementation code copied. Root licence is not a review of every separately licensed component.",
+      "additional_urls": [
+        "https://github.com/gitbutlerapp/gitbutler/blob/409a85979c264ab6542018d4df503eff57a0f9ad/LICENSE.md",
+        "https://github.com/gitbutlerapp/gitbutler/commit/409a85979c264ab6542018d4df503eff57a0f9ad"
+      ]
+    },
+    {
+      "id": "S14",
+      "title": "Jiang, Kim, Lin and Yang: Runnable Commit Untangling for Coding Agents",
+      "url": "https://arxiv.org/html/2610.11593v1",
+      "revision": "arXiv:2610.11593v1",
+      "publication_date": "2026-10-08",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "RucTangle/TangleEval connects commit grouping and ordering to intermediate runnability and repair evaluation.",
+      "does_not_establish": "Preprint, not reproduced here. Its runnability check uses pytest collection, which is weaker than a full functional test suite.",
+      "additional_urls": [
+        "https://arxiv.org/abs/2610.11593"
+      ]
+    },
+    {
+      "id": "S15",
+      "title": "Muku: Verifying Coordination in Parallel Coding Agents: NP-Bench and a Scheduling Planner",
+      "url": "https://arxiv.org/html/2610.07261v1",
+      "revision": "arXiv:2610.07261v1; paper identifies Nerveplane v0.17.0",
+      "publication_date": "2026-10-05",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Merged-result evaluation, scope/producer-consumer scheduling and explicitly reported negative controls are useful design leads.",
+      "does_not_establish": "Preprint, not reproduced here. Declared scopes are seeded; live intervention combines timing, specificity, scopes and merge order. It does not isolate scheduling or establish automatic scope inference.",
+      "additional_urls": [
+        "https://arxiv.org/abs/2610.07261",
+        "https://github.com/sumanyumuku98/Nerveplane"
+      ]
+    },
+    {
+      "id": "S16",
+      "title": "Yan et al.: One Skill Too Many: How Co-Installed Skills Conflict in Coding Agents",
+      "url": "https://arxiv.org/html/2610.11647v1",
+      "revision": "arXiv:2610.11647v1",
+      "publication_date": "2026-10-08",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Skill substitution can lose exclusive constraints despite task completion; motivates actual-path/runtime and invariant checks.",
+      "does_not_establish": "Preprint, not reproduced here. Its population and model-specific rates are not One Checkout or universal host failure rates.",
+      "additional_urls": [
+        "https://arxiv.org/abs/2610.11647"
+      ]
+    },
+    {
+      "id": "S17",
+      "title": "CooperBench: Why Coding Agents Cannot be Your Teammates Yet",
+      "url": "https://arxiv.org/html/2601.13295v2",
+      "revision": "arXiv:2601.13295v2",
+      "publication_date": "2026-01-26 (v2)",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Evaluate cooperation and joint final success, not only individual agent completion or conflict counts.",
+      "does_not_establish": "Not reproduced; results do not directly measure One Checkout or shared-index contamination.",
+      "additional_urls": []
+    },
+    {
+      "id": "S18",
+      "title": "AgenticFlict: A Large-Scale Dataset of Merge Conflicts in AI Coding Agent Pull Requests on GitHub",
+      "url": "https://arxiv.org/abs/2604.03551",
+      "revision": "arXiv:2604.03551v1",
+      "publication_date": "2026-04-04",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Lead for a replay corpus of textual integration conflicts.",
+      "does_not_establish": "No dataset downloaded or licence clearance performed. Merge-conflict rates are not same-file staging contamination prevalence.",
+      "additional_urls": []
+    },
+    {
+      "id": "S19",
+      "title": "Paperclip issue 9460: shared working directory and staged-file contamination",
+      "url": "https://github.com/paperclipai/paperclip/issues/9460",
+      "revision": null,
+      "publication_date": "2026-07-12",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "A concrete public report of cross-run commit contamination and branch races, with a request for per-run worktrees.",
+      "does_not_establish": "One unreplicated report, not prevalence, purchase intent or evidence that this reporter prefers shared checkouts.",
+      "additional_urls": []
+    },
+    {
+      "id": "S21",
+      "title": "Anthropic: Redesigning source control",
+      "url": "https://www.anthropic.com/engineering/redesigning-source-control",
+      "revision": null,
+      "publication_date": "2026-10-13",
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Scion motivates agent-scale source-control engineering; storage/history architecture differs from this local Git transaction.",
+      "does_not_establish": "No Scion source was executed or compared. Does not support equivalence, superiority, lab interest or a public installation claim.",
+      "additional_urls": []
+    },
+    {
+      "id": "S22",
+      "title": "OpenAI: Build skills",
+      "url": "https://learn.chatgpt.com/docs/build-skills",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Official local skill locations and duplicate-name behaviour support real-discovery tests rather than filesystem-copy claims.",
+      "does_not_establish": "Living documentation, not an executed Claude/Codex host session.",
+      "additional_urls": [
+        "https://developers.openai.com/codex/build-skills"
+      ]
+    },
+    {
+      "id": "S23",
+      "title": "Anthropic: Claude Code skills",
+      "url": "https://code.claude.com/docs/en/skills",
+      "revision": null,
+      "publication_date": null,
+      "accessed": "2026-10-13",
+      "evidence_status": "inspected",
+      "licence_observed": null,
+      "used_for": "Official skill packaging/discovery reference for the existing Claude route.",
+      "does_not_establish": "Living documentation, not an executed host or plugin validation in this review.",
+      "additional_urls": []
+    }
+  ],
+  "assimilation_note": "Dated Type B research ledger retained as attributed candidate research. Specific mechanisms independently checked during integration; comparator performance and licence equivalence are not inferred. No third-party implementation vendored."
+}

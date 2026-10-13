@@ -4,3 +4,11 @@ __pycache__/
 /build/
 /dist/
 .coverage
+/.agents/skills/one-checkout/
+/.claude/skills/one-checkout/
+/.agents/one-checkout-backups/
+/.claude/one-checkout-backups/
+/.agents/one-checkout-stage-*/
+/.claude/one-checkout-stage-*/
+/.agents/one-checkout-install.lock
+/.claude/one-checkout-install.lock

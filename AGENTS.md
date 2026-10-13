@@ -18,3 +18,11 @@ Update the README map and the layout policy when adding a directory role.
 Keep host-specific paths, private records and local runtime state out of this
 repository. Public publication and agent installation require their own user
 request; creating a plugin manifest does not perform either action.
+
+The installed payload is declared in `skills/one-checkout/bundle.json`. New
+skill resources must be added there; the installer refuses missing/unlisted files.
+Read [architecture](docs/architecture.md), [repository ownership](docs/repository_guide.md)
+and [staging handoff](docs/staging_handoff.md) when changing those boundaries.
+Keep developer fault injection and model evaluation in `scripts/` and `tests/`;
+installed resources must work after the authoring checkout is removed.
+Do not equate passing scripted fixtures with live agent discovery or efficacy.

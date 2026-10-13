@@ -1,0 +1,35 @@
+name: First-run or integration evidence
+description: Report a synthetic, reproducible result without sharing private work.
+title: "Evaluation: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use synthetic files. Remove private paths, credentials and source before submitting.
+        Use SECURITY.md for security reports. This form sends nothing automatically.
+  - type: textarea
+    id: environment
+    attributes:
+      label: Exact environment and source
+      description: Source commit, OS/filesystem, Git/Python paths and versions; agent/version only if actually used.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Commands and smallest synthetic fixture
+      description: Include the starting HEAD/index/worktree state and the expected outcome.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Observed result
+      description: Exit codes, redacted receipt and independent Git checks. Distinguish runtime success from live skill discovery.
+    validations:
+      required: true
+  - type: textarea
+    id: usability
+    attributes:
+      label: Understanding and repeat use
+      description: Where did you need help? Did you use it again? Timing is optional; separate setup from execution.

@@ -247,10 +247,8 @@ class OneCheckoutTests(unittest.TestCase):
                 self.stream = stream
                 self.count = 0
 
-            def readline(self):
-                result = self.stream.readline()
-                self.count += 1
-                return b"" if failure == "ack" and self.count == 3 else result
+            def fileno(self):
+                return self.stream.fileno()
 
             def close(self):
                 self.stream.close()
@@ -264,7 +262,17 @@ class OneCheckoutTests(unittest.TestCase):
             return process
 
         patch = self.patch_for("shared.py", b"replacement\n")
-        with mock.patch.object(core.subprocess, "Popen", side_effect=intercepted):
+        read_ack = core._read_ack
+        reads = 0
+
+        def intercepted_ack(process, timeout):
+            nonlocal reads
+            result = read_ack(process, timeout)
+            reads += 1
+            return b"" if failure == "ack" and reads == 3 else result
+
+        with mock.patch.object(core.subprocess, "Popen", side_effect=intercepted), \
+                mock.patch.object(core, "_read_ack", side_effect=intercepted_ack):
             return self.land(patch)
 
     def test_lost_commit_ack_retains_candidate_and_uncertainty(self) -> None:
