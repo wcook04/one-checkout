@@ -3,7 +3,9 @@
   "name": "one-checkout",
   "version": "0.1.0",
   "description": "Commit an explicit patch from a shared Git checkout while preserving unrelated staged changes.",
-  "author": {"name": "One Checkout contributors"},
+  "author": {"name": "One Checkout contributors", "url": "https://github.com/wcook04"},
+  "homepage": "https://github.com/wcook04/one-checkout",
+  "repository": "https://github.com/wcook04/one-checkout",
   "license": "MIT",
   "keywords": ["git", "agents", "scoped-commits"]
 }

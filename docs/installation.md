@@ -6,16 +6,19 @@ route per host and scope; avoid duplicate bare-skill and plugin copies.
 
 ## First run
 
-From a reviewed checkout or Git-less source archive:
+Clone a versioned release from [wcook04/one-checkout](https://github.com/wcook04/one-checkout):
 
 ```sh
+git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
+cd one-checkout
+git rev-parse HEAD
 python3 scripts/demo.py --human --compare-git
 python3 scripts/try_install.py --human
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
 
-The first two commands use disposable synthetic repositories. The next two
+The demo and install rehearsal use disposable synthetic repositories. The last two
 inspect and perform an intentional user installation. For an existing project,
 add `--scope project --project /absolute/path/to/project`; select only one host
 with `--agent codex` or `--agent claude`.
@@ -56,13 +59,32 @@ snapshot. Ordinary users should install a reviewed commit. A source archive has
 no authenticated Git identity: its content hashes describe bytes, not a signed
 release. Unrelated repository changes do not redefine the skill payload.
 
+A tag selects a version; the Git installation receipt records its resolved commit
+ID and payload hashes. Admission compares captured raw blobs and Git executable
+modes with that commit independently of status, including hidden index flags.
+The installer publishes those same captured bytes. These checks establish content
+identity, not publisher authenticity. A Git-less source archive remains supported.
+
 ## Upgrade and reversible uninstall
 
 An identical copy is left unchanged. A different existing copy is refused until
 you inspect it and choose to retain it during replacement:
 
 ```sh
+VERSION=v0.1.0  # Replace with the released tag you have chosen to review.
+git clone --branch "$VERSION" --depth 1 https://github.com/wcook04/one-checkout.git "one-checkout-$VERSION"
+cd "one-checkout-$VERSION"
+git rev-parse HEAD
+python3 scripts/demo.py --human --compare-git
+python3 scripts/install.py --agent both --backup-existing --dry-run
 python3 scripts/install.py --agent both --backup-existing
+```
+
+Use a new source directory for each reviewed upgrade. If it already exists, Git
+refuses the clone; inspect it rather than deleting or resetting it automatically.
+Check the proposed destinations and backups before the final command. To remove:
+
+```sh
 python3 scripts/install.py --agent both --uninstall --dry-run
 python3 scripts/install.py --agent both --uninstall
 ```

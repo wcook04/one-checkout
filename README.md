@@ -8,6 +8,14 @@ conditional-ref primitives. It does not infer which changes belong to you.
 Python 3.10+, Git 2.39+, macOS or Linux. Standard library only: no package
 manager, server or model credentials needed for the runtime.
 
+Get the versioned source:
+
+```sh
+git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
+cd one-checkout
+git rev-parse HEAD
+```
+
 ## Try it before installing
 
 From a reviewed source checkout or source archive:
@@ -38,6 +46,8 @@ before the next commit. Working-file isolation still needs separate worktrees.
 
 ## Install for Claude Code and Codex
 
+From the source directory above:
+
 ```sh
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
@@ -55,10 +65,10 @@ Reload skills or start a fresh session if the host has not detected it. Use one
 installation route per host/scope to avoid duplicate skills. The installer does
 not change agent permissions or global instructions.
 
-This repository is prepared locally. There is no public release URL or configured
-marketplace yet. The root [portable manifest](plugin.json) and
-[Claude manifest](.claude-plugin/plugin.json) describe local plugin packaging;
-creating them does not publish or install a plugin.
+Source and versioned releases are at [wcook04/one-checkout](https://github.com/wcook04/one-checkout).
+The root [portable manifest](plugin.json) and
+[Claude manifest](.claude-plugin/plugin.json) describe plugin packaging.
+Copied skills are the tested installation route; no marketplace is supplied.
 
 ## Review and commit a patch
 
@@ -72,7 +82,7 @@ This example assumes **all changes in the selected file are authorised**. Save
 artifacts outside the checkout, with a fresh directory for each attempt:
 
 ```sh
-TOOL=/absolute/path/to/one-checkout/skills/one-checkout/scripts/one_checkout.py
+TOOL="$HOME/.agents/skills/one-checkout/scripts/one_checkout.py"
 REPO=/absolute/path/to/project
 ARTIFACTS=$(mktemp -d)
 PARENT=$(git -C "$REPO" rev-parse HEAD)
@@ -87,6 +97,11 @@ python3 "$TOOL" commit --repo "$REPO" --patch "$ARTIFACTS/owned.patch" \
   --plan-file "$ARTIFACTS/plan.json" --record-file "$ARTIFACTS/operation.jsonl" \
   --message "Describe the authorised change"
 ```
+
+`TOOL` above uses the Codex user copy. For the Claude Code user copy, set
+`TOOL="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/one-checkout/scripts/one_checkout.py"`.
+For a project installation, use the destination in the install receipt plus
+`/scripts/one_checkout.py`. The copied runtime works without the source checkout.
 
 Repeat `--path` for each exact file. Globs/directories and a declared set that
 differs from the actual patch are refused. Ordinary `git diff` omits untracked

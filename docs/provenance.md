@@ -69,7 +69,10 @@ Packaging guidance checked on 13 October 2026:
 
 The portable manifest targets
 `https://agent-plugins.org/schemas/1.0.0/plugin.schema.json`.
-No marketplace or public hosting URL is declared.
+Source, issues and releases live at
+[wcook04/one-checkout](https://github.com/wcook04/one-checkout).
+The skill installer is the supported installation route; no marketplace
+listing is required or implied.
 
 Release preparation also consulted Trail of Bits'
 [open-sourcing workflow](https://github.com/trailofbits/skills/tree/8e54050ae63c2f62224c35b1616efe71865b4777/plugins/open-sourcing/skills/open-sourcing)

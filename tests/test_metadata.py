@@ -22,10 +22,22 @@ class Metadata(unittest.TestCase):
         claude = json.loads((ROOT / '.claude-plugin/plugin.json').read_text())
         self.assertEqual(portable['$schema'], 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json')
         self.assertTrue(set(portable) <= {'$schema','name','version','description','author','homepage','repository','license','keywords','extensions'})
-        for key in ('name','version','description','author','license'):
+        for key in ('name','version','description','author','homepage','repository','license'):
             self.assertEqual(portable[key], claude[key])
         self.assertEqual(portable['license'], 'MIT')
         self.assertTrue((ROOT / claude['skills'] / 'one-checkout/SKILL.md').is_file())
+
+    def test_versioned_source_and_reporting_routes_match_metadata(self):
+        metadata = json.loads((ROOT / 'plugin.json').read_text())
+        repository = 'https://github.com/wcook04/one-checkout'
+        self.assertEqual(metadata['repository'], repository)
+        self.assertEqual(metadata['homepage'], repository)
+        self.assertEqual(metadata['author']['url'], 'https://github.com/wcook04')
+        clone = 'git clone --branch v' + metadata['version'] + ' --depth 1 ' + repository + '.git'
+        for name in ('README.md', 'docs/installation.md'):
+            self.assertIn(clone, (ROOT / name).read_text())
+        self.assertIn(repository + '/security/advisories/new', (ROOT / 'SECURITY.md').read_text())
+        self.assertIn(repository + '/pulls', (ROOT / 'CONTRIBUTING.md').read_text())
 
     def test_readme_local_file_links_resolve_to_required_interfaces(self):
         required = set(json.loads((ROOT / 'docs/repository_layout.json').read_text())['required_files'])

@@ -25,8 +25,12 @@ installing it. Stable symlinks in source/destination ancestry and special files 
 The installer is not a hostile-filesystem sandbox; stop active skill use during
 upgrades. Source hashes establish content identity, not publisher authenticity.
 
-No public vulnerability-reporting destination is configured yet. Please
-avoid putting secrets or a live repository into a reproduction.
+Report suspected vulnerabilities privately through
+[GitHub vulnerability reporting](https://github.com/wcook04/one-checkout/security/advisories/new).
+The maintainer is [wcook04](https://github.com/wcook04). Include the version or
+commit ID, Python/Git versions, platform and a disposable synthetic reproduction.
+Do not put vulnerabilities, secrets, private patches or a live repository in a
+public issue or reproduction.
 
 Individual Git commands and complete protocol acknowledgements have configurable
 deadlines. Signers run in owned child process groups; malicious helpers and

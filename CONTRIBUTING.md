@@ -23,7 +23,12 @@ Keep docs examples aligned with `--help`. A layout change also updates
 `claude plugin validate --strict .` if that CLI is available; do not make it a
 dependency of the offline Python tests.
 
-No public issue tracker or contribution destination is configured yet.
+Report reproducible bugs and discuss changes in
+[GitHub issues](https://github.com/wcook04/one-checkout/issues); submit changes as
+[pull requests](https://github.com/wcook04/one-checkout/pulls).
+Maintainer: [wcook04](https://github.com/wcook04). For suspected vulnerabilities,
+follow [SECURITY.md](SECURITY.md) instead of opening a public issue.
+Keep discussion specific to code and results, and treat contributors respectfully.
 Fresh-clone and installed-copy checks are in [docs/release_checks.md](docs/release_checks.md).
 
 The [repository guide](docs/repository_guide.md) names canonical owners and the
