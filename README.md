@@ -125,7 +125,7 @@ TOOL="$HOME/.agents/skills/one-checkout/scripts/one_checkout.py"
 REPO=/absolute/path/to/project
 PATCH=/absolute/path/to/owned.patch
 PARENT=full_commit_SHA_the_patch_was_prepared_against
-ARTIFACTS=$(mktemp -d)
+ARTIFACTS=$(cd "$(mktemp -d)" && pwd -P)
 python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" \
   > "$ARTIFACTS/plan.json" 2> "$ARTIFACTS/plan.stderr"
