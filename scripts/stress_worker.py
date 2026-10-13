@@ -151,4 +151,3 @@ def worker(config_path: Path) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(worker(Path(sys.argv[1])))
-
