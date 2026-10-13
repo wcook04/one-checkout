@@ -1,0 +1,8 @@
+{
+  "name": "one-checkout",
+  "version": "0.1.0",
+  "description": "Commit an explicit patch from a shared Git checkout while preserving unrelated staged changes.",
+  "author": {"name": "One Checkout contributors"},
+  "license": "MIT",
+  "skills": "./skills/"
+}

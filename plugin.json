@@ -1,0 +1,9 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "one-checkout",
+  "version": "0.1.0",
+  "description": "Commit an explicit patch from a shared Git checkout while preserving unrelated staged changes.",
+  "author": {"name": "One Checkout contributors"},
+  "license": "MIT",
+  "keywords": ["git", "agents", "scoped-commits"]
+}
