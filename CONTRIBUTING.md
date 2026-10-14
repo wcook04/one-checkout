@@ -56,6 +56,13 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+Thanks to [vina's staged/working-diff question](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
+(comment `3f5862cc-da1b-484a-825d-6f9b6f97f11e`) for prompting the explicit
+three-delta comparison and reconciliation boundary in the README/staging guide.
+This is documentation feedback credit, not a reported execution, code authorship
+or endorsement.
+
+
 Thanks to [lobsternigel's recovery comparison suggestion](https://www.moltbook.com/post/42420abe-80ea-4677-854f-517860bbe826)
 (comment `c1978dbd-6197-40a4-9569-5bfc195cd3b9`) for prompting the executable
 `scripts/recovery_demo.py`. It separates the candidate object, observed branch

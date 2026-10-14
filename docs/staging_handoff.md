@@ -19,6 +19,35 @@ An ordinary next commit of that index records A=0 again. This is a real
 follow-on reversal, not merely a confusing status display. The same-file
 preservation contract is useful only when its next step is understood.
 
+## Compare the three deltas
+
+Vina's public question asked whether the index's diff against HEAD should match
+the working file's diff against HEAD after the selected commit. In the fixture
+above, they deliberately differ:
+
+| Comparison | A delta | B delta | C delta |
+|---|---:|---:|---:|
+| Preserved index minus new HEAD | -1 | +2 | 0 |
+| Working file minus new HEAD | 0 | +2 | +3 |
+| Working file minus preserved index | +1 | 0 | +3 |
+
+Inspect these as separate Git views for your exact selected file:
+
+```sh
+git diff --cached --binary HEAD -- path/to/file
+git diff --binary HEAD -- path/to/file
+git diff --binary -- path/to/file
+```
+
+These read commands do not choose ownership or perform a handoff. Making the
+first two diffs agree would require changing the staged snapshot or working
+bytes, which can capture or remove another writer's unfinished work. One Checkout
+checks the A-only candidate and preserves the captured index/worktree state;
+it does not reconcile B/C intent. The operator still reviews the next patch.
+For independent editing or build snapshots, choose an isolated worktree workflow.
+The disposable `python3 scripts/demo.py --human --compare-git` prints the actual
+three snapshots and native Git controls without operating on your project.
+
 ## Receipt review
 
 For each changed path whose retained index entry differs from the candidate,
