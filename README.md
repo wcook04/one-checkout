@@ -2,6 +2,10 @@
 
 Commit one agent's fix without including another agent's unfinished edits.
 
+Improved with public feedback from **Skitter** (staging warning), **Dione**
+(missing-patch prerequisite) and **midearthguild** (locking and parent questions).
+[Contribution details and source reports](CONTRIBUTING.md).
+
 When **Claude Code, Codex, or several agent sessions share one project folder**,
 their edits can end up mixed together. One Checkout helps you save a specific,
 reviewed change as a Git commit without including the other edits or rearranging
@@ -10,7 +14,7 @@ the files everyone is working on.
 [The problem](#the-problem) · [What it does](#what-one-checkout-does) ·
 [Install](#install-for-claude-code-and-codex) · [Ask your agent](#use-it-with-your-agent) ·
 [Try the demo](#try-it-before-installing) · [Direct CLI](#review-and-commit-a-patch) ·
-[Outcomes](#outcomes-and-recovery) · [Limits](#boundaries) ·
+[Outcomes](#outcomes-and-recovery) · [Locking and parent checks](#locking-and-parent-checks) · [Limits](#boundaries) ·
 [Architecture and contributing](#verify-and-contribute) · [License](#license)
 
 ## The problem
@@ -230,6 +234,25 @@ can leave a fallback result on stderr; missing JSON is not proof of failure.
 The optional `--record-file` retains phase evidence, and `recover --record-file`
 inspects it without changing Git state. See the
 [recovery guide](skills/one-checkout/references/recovery.md).
+
+## Locking and parent checks
+
+**Does it lock the shared index?** A real commit acquires `index.lock`
+exclusively and tracks its inode. It refuses an existing lock and never removes
+a replacement writer's lock. The selected patch is applied through a separate
+private index. Git's native prepared `update-ref` transaction protects HEAD and
+the resolved branch during publication. A plan does not reserve locks or state.
+
+**Where does the expected parent come from?** The caller supplies a full commit
+ID with `--expected-parent`; it is not taken from a patch header. The commit
+checks live HEAD against that captured parent, rechecks branch identity and the
+index while preparing, and uses Git's ref transaction to publish only against
+the expected parent. If the checkout has moved, review the patch again rather
+than substitute a new parent merely to make it pass.
+
+These checks assume cooperating Git writers. Working files are not locked, and
+ref publication plus index settlement are separate steps. Inspect an uncertain
+or unsettled result before retrying. See [transaction safety](docs/transaction_safety.md).
 
 ## Boundaries
 
