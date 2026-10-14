@@ -69,6 +69,13 @@ can identify the change to commit. For separate editing environments, use Git
 worktrees; for an ordinary single-owner commit, normal Git is usually simpler.
 See [choosing a workflow](docs/choosing_a_workflow.md).
 
+For example, if two writers append to one shared note and neither retains a
+separate reviewed patch, One Checkout cannot decide which lines belong to each
+writer. Establish and review that patch before invoking the tool. Restoring an
+old file or deleting the other writer's section from the shared working file
+would change their work; use the [patch-selection guide](skills/one-checkout/references/patch-selection.md)
+to prepare a candidate separately.
+
 ## Install for Claude Code and Codex
 
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the

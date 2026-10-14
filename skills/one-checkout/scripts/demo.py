@@ -200,10 +200,12 @@ def render_human(result: dict) -> str:
              f"{'shared.py':<12} {'Before':<27} After"]
     for key, label in (("head", "HEAD"), ("index", "Index"), ("worktree", "Working file")):
         lines.append(f"{label:<12} {compact(result['before'][key]):<27} {compact(result['after'][key])}")
-    lines += ["", "Actual git diff --cached -- shared.py (against the new HEAD):",
-              result["cached_diff"].rstrip(),
+    lines += ["", "WARNING: REVIEW THE STAGING HANDOFF BEFORE ANOTHER COMMIT",
               "The retained index omits A; an ordinary commit of that snapshot can undo A.",
-              "Preserving a snapshot does not rebase it. Review the next owned patch; do not reset or restage others' work.",
+              "Inspect the staged diff and review the next owned patch; do not reset or restage others' work.",
+              "Preserving a snapshot does not rebase it.",
+              "", "Actual git diff --cached -- shared.py (against the new HEAD):",
+              result["cached_diff"].rstrip(),
               "", "Sequential stale-parent check: exit " + str(result["refusal"]["exit_code"])
               + ", " + result["refusal"]["receipt"]["code"] + "; state unchanged."]
     for name, passed in result["checks"].items():
