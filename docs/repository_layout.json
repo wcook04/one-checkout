@@ -94,7 +94,9 @@
     "docs/agent_evaluation.md",
     "docs/stress_testing.md",
     "scripts/check_backends.py",
-    "docs/recovery_design.md"
+    "docs/recovery_design.md",
+    "scripts/recovery_demo.py",
+    "tests/test_recovery_demo.py"
   ],
   "content_routes": {
     "README.md": [

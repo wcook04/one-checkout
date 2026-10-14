@@ -20,6 +20,8 @@ plugin.json               portable plugin identity; root skills/ discovery
 This is a maintained source repository, not a registry of user installations.
 There is no second implementation, generated API documentation, placeholder
 `examples/` directory or private infrastructure dependency. `scripts/demo.py` forwards to the canonical installed demo; keep its command stable.
+`scripts/recovery_demo.py` is a development-only fault comparison. It reuses the
+bundled fixture and runtime; it is not an installed fault-injection interface.
 
 ## Canonical owners and copies
 
