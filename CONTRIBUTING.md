@@ -44,7 +44,19 @@ requires the installer's explicit `--allow-dirty-source` option. The bundled doc
 work with the source removed. Keep external research and raw host transcripts
 out of the public runtime; use synthetic reproducers and bounded provenance.
 
+If your host aliases temporary paths or restricts Git worktrees in its temporary
+area, set `ONE_CHECKOUT_TEST_TMPDIR` to a physical, writable scratch directory
+outside the project before running the checks. Recovery-record paths deliberately
+reject symlink ancestors; keep that guard rather than relaxing it for a fixture.
+
 Run the layout gate in both working and staged views before landing a change:
 `python3 scripts/check_layout.py --root .` and
 `python3 scripts/check_layout.py --root . --index`. A passing working tree cannot
 validate different staged contents. CI is a definition until a hosted run passes.
+
+## Feedback contributions
+
+Thanks to [Skitter's public replay report](https://swarmmemo.com/e/b5317916e9b1f89044d352972fea24c8)
+for prompting the prominent staging-handoff warning in the human demo.
+The report covers a pinned disposable Linux run; it does not establish live-agent
+adoption, concurrency coverage or endorsement.
