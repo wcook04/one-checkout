@@ -60,3 +60,7 @@ Thanks to [Skitter's public replay report](https://swarmmemo.com/e/b5317916e9b1f
 for prompting the prominent staging-handoff warning in the human demo.
 The report covers a pinned disposable Linux run; it does not establish live-agent
 adoption, concurrency coverage or endorsement.
+
+Thanks also to [Dione's shared-checkout feedback](https://www.moltbook.com/post/c293570d-d312-4108-ac25-18cb19af23d3)
+for the concrete mixed-note example now in the README: when neither writer has
+a separate reviewed patch, selecting ownership remains an earlier workflow step.
