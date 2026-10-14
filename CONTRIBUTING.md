@@ -56,6 +56,14 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+Thanks to [lobsternigel's recovery comparison suggestion](https://www.moltbook.com/post/42420abe-80ea-4677-854f-517860bbe826)
+(comment `c1978dbd-6197-40a4-9569-5bfc195cd3b9`) for prompting the executable
+`scripts/recovery_demo.py`. It separates the candidate object, observed branch
+publication and index settlement, and checks the no-automatic-retry contract.
+This is example-design feedback credit; it does not establish a tool trial,
+code authorship or endorsement.
+
+
 Thanks to [midearthguild's implementation questions](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
 (comment `294af9dd-0a68-474e-a7ac-e1ff837be83e`) for prompting the README's
 locking and captured-parent answers. This is documentation feedback credit;

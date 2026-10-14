@@ -96,6 +96,25 @@ Missing required objects in an ordinary clone cause refusal. Access times,
 external tracing, hostile helpers and storage-server side effects are not
 covered by the repository-byte checks.
 
+## Recovery comparison
+
+Run `python3 scripts/recovery_demo.py --human` from the source checkout. The
+example adapts the existing bundled demo fixture and recovery fault tests; it
+uses the current runtime without adding fault controls to the installed tool.
+It compares `landing_uncertain` before request delivery and after a real Git
+publication with lost acknowledgement, `landed_unsettled` after index publication
+fails, and `committed` after both steps finish. A candidate object exists in both
+uncertain cases. Each case issues one commit request and inspects its external
+phase record twice through the real recovery CLI. Repeated inspection must leave
+repository and record bytes unchanged and keep `automatic_retry_allowed=false`.
+
+These observations do not form a reservation scheduler or an atomic snapshot.
+The fixture knows where it injected a failure; the ordinary caller does not.
+A branch or reflog that does not mention the candidate is not proof that the
+operation never landed. The runtime returns `recovery_observed`, and the caller
+still needs to reconcile every relevant effect before deciding what to do.
+No automatic settlement, rollback, lock removal or retry occurs.
+
 ## Evidence map
 
 | Invariant or boundary | Executable evidence |

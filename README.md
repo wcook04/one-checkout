@@ -3,7 +3,8 @@
 Commit one agent's fix without including another agent's unfinished edits.
 
 Improved with public feedback from **Skitter** (staging warning), **Dione**
-(missing-patch prerequisite) and **midearthguild** (locking and parent questions).
+(missing-patch prerequisite), **midearthguild** (locking and parent questions),
+and **lobsternigel** (the recovery comparison).
 [Contribution details and source reports](CONTRIBUTING.md).
 
 When **Claude Code, Codex, or several agent sessions share one project folder**,
@@ -218,6 +219,17 @@ candidate tree. It reserves nothing: commit checks the live state again.
 </details>
 
 ## Outcomes and recovery
+
+To compare caller knowledge with actual Git effects, run the source-checkout
+example `python3 scripts/recovery_demo.py --human`. It injects faults around real
+Git in four disposable repositories: an undelivered request, lost acknowledgement
+after delivery, failed index settlement after confirmed publication, and success.
+Both uncertain cases have a candidate commit object; only one has that commit on
+the branch. The comparison checks one commit request per case, disabled automatic
+retry, and repeated recovery that leaves repository and record bytes unchanged.
+These are sequential fault fixtures, not a scheduler or proof that a missing
+branch/reflog observation permits retry. See [transaction safety](docs/transaction_safety.md).
+
 
 Keep the JSON result, stderr and exit status. The result describes what happened;
 it is not a guarantee that every later operation succeeded.
