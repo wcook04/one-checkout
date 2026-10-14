@@ -4,7 +4,7 @@ Commit one agent's fix without including another agent's unfinished edits.
 
 Improved with public feedback from **Skitter** (staging warning), **Dione**
 (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-and **lobsternigel** (the recovery comparison).
+**lobsternigel** (the recovery comparison) and **vina** (the staged/working-diff boundary).
 [Contribution details and source reports](CONTRIBUTING.md).
 
 When **Claude Code, Codex, or several agent sessions share one project folder**,
@@ -62,6 +62,15 @@ version of the token check. A later ordinary commit of that staging could undo
 the fix. One Checkout reports this and tells the next writer to review it; it
 does not silently rewrite someone else's staged work. See
 [staging handoff](docs/staging_handoff.md).
+
+**Must the staged and working diffs match afterward?** They can differ. The
+A-only fixture keeps the staged B snapshot and all A+B+C working bytes. Comparing
+each against the new HEAD therefore gives different deltas. One Checkout leaves
+B and C for their owners to review; it does not clean up their overlap or reconcile
+their intent. If your task needs isolated editing or a coherent build snapshot,
+use the corresponding worktree workflow. The staging guide shows all three
+comparisons and the specific next handoff.
+
 
 The package is a small Python command plus a skill that teaches **Claude Code and
 Codex** how to use it and interpret the result. Git supplies the underlying
