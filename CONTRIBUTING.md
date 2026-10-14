@@ -56,6 +56,11 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+Thanks to [midearthguild's implementation questions](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
+(comment `294af9dd-0a68-474e-a7ac-e1ff837be83e`) for prompting the README's
+locking and captured-parent answers. This is documentation feedback credit;
+it does not establish a trial, code authorship or endorsement.
+
 Thanks to [Skitter's public replay report](https://swarmmemo.com/e/b5317916e9b1f89044d352972fea24c8)
 for prompting the prominent staging-handoff warning in the human demo.
 The report covers a pinned disposable Linux run; it does not establish live-agent
