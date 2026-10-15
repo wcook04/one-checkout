@@ -109,16 +109,17 @@ ordinary commit, normal Git is usually simpler. See
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
-Start with the [demo clone above](#try-it-before-installing), then install from
-that same checkout:
+The demo above follows current `main`. Install the tagged `v0.1.0` release
+from a separate clone, so the two source folders can coexist:
 
 ```sh
+git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.1.0
+cd one-checkout-v0.1.0
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
 
-The demo clone follows current `main`. For the tagged `v0.1.0` release instead,
-use the [versioned installation route](docs/installation.md#first-run).
+The [installation guide](docs/installation.md) also covers upgrades and removal.
 
 The installer copies a complete skill into:
 
