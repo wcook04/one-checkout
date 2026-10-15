@@ -328,25 +328,36 @@ _DEBUG_ENTRY = re.compile(
 )
 
 
-def _semantic_index_flags(git: Git, env: dict[str, str]) -> dict[str, int]:
-    """Read flags Git omits from --stage; refuse unfamiliar debug output.
+def _index_state(git: Git, env: dict[str, str]) -> tuple[dict[str, tuple[str, str]], dict[str, int]]:
+    """Read entries and semantic flags together from one private index snapshot.
 
-    Paths are NUL-delimited, so embedded newlines and 'flags:' remain unambiguous.
-    --debug is not a stable public format: fail closed rather than guess if it changes.
+    Paths are NUL-delimited, so embedded tabs, newlines and 'flags:' remain
+    unambiguous. --debug is not a stable public format: refuse unfamiliar output.
+    Combining the reads avoids a second Git process and traversal, not a check.
     """
-    data = git.run(["ls-files", "--debug", "-z"], env=env).stdout
-    result: dict[str, int] = {}
+    data = git.run(["ls-files", "--stage", "--debug", "-z"], env=env).stdout
+    entries: dict[str, tuple[str, str]] = {}
+    flags_by_path: dict[str, int] = {}
     offset = 0
     while offset < len(data):
         end = data.find(b"\0", offset)
         match = _DEBUG_ENTRY.match(data, end + 1) if end >= 0 else None
         if match is None:
             raise Refusal("unsupported_index_flags", "Cannot safely read Git index flags on this Git version.")
+        try:
+            meta, raw_path = data[offset:end].split(b"\t", 1)
+            mode, oid, stage = meta.decode("ascii").split()
+        except (ValueError, UnicodeDecodeError) as error:
+            raise Refusal("unsupported_index_flags", "Cannot safely read Git index entries and flags.") from error
+        if stage != "0":
+            raise Refusal("unmerged_index", "Resolve unmerged index entries before using one-checkout.")
+        path = os.fsdecode(raw_path)
+        entries[path] = (mode, oid)
         flags = int(match[1], 16) & SEMANTIC_INDEX_FLAGS
         if flags:
-            result[os.fsdecode(data[offset:end])] = flags
+            flags_by_path[path] = flags
         offset = match.end()
-    return result
+    return entries, flags_by_path
 
 
 def _check_object_policy(git: Git) -> None:
@@ -729,8 +740,7 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
         original_index.write_bytes(original)
         os.utime(original_index, ns=(index_mtime_ns, index_mtime_ns))
         shared_env = {"GIT_INDEX_FILE": str(original_index)}
-        original_entries = _entries(git, shared_env)
-        original_flags = _semantic_index_flags(git, shared_env)
+        original_entries, original_flags = _index_state(git, shared_env)
         env = {"GIT_INDEX_FILE": str(private_index)}
         if dry_run:
             objects = scratch / "objects"
@@ -802,8 +812,8 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
                 expected_entries[path] = candidate_entries[path]
             else:
                 expected_entries.pop(path, None)
-        if (_entries(git, next_env) != expected_entries
-                or _semantic_index_flags(git, next_env) != original_flags):
+        next_entries, next_flags = _index_state(git, next_env)
+        if next_entries != expected_entries or next_flags != original_flags:
             raise Refusal("index_validation_failed", "The prepared index did not preserve the declared entries.")
         next_bytes = next_index.read_bytes()
         next_mtime_ns = next_index.stat().st_mtime_ns
