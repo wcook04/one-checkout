@@ -205,7 +205,7 @@ def render_human(result: dict) -> str:
               "Inspect the staged diff and review the next owned patch; do not reset or restage others' work.",
               "Preserving a snapshot does not rebase it.",
               "For B's owner, review a B-only patch against the new HEAD that preserves A: "
-              "https://github.com/wcook04/one-checkout/blob/main/docs/staging_handoff.md#deliberate-next-action",
+              "https://github.com/wcook04/one-checkout/blob/548c65d3332f74d0f2f77fea06796d6dffe7ea85/docs/staging_handoff.md#deliberate-next-action",
               "", "Actual git diff --cached -- shared.py (against the new HEAD):",
               result["cached_diff"].rstrip(),
               "", "Sequential stale-parent check: exit " + str(result["refusal"]["exit_code"])
