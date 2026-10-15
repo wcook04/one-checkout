@@ -11,6 +11,10 @@ other staged changes and every working file. You decide which edits belong in it
 [Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
 [Video plans](#videos)
 
+The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
+for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
+to work with this repository.
+
 Improved with public feedback from **Skitter** (staging warning and next-owner guide),
 **Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
 **lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
