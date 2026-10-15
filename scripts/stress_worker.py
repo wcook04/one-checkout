@@ -56,15 +56,18 @@ def worker(config_path: Path) -> int:
         return process
 
     core.subprocess.Popen = observed_popen
-    entries = core._entries
+    # Preserve the snapshot barrier for both current and older --tool pins.
+    # The combined reader supersedes _entries only for shared-index snapshots.
+    reader_name = "_index_state" if hasattr(core, "_index_state") else "_entries"
+    read_index = getattr(core, reader_name)
 
     def observed_entries(git, env, *args, **kwargs):
-        result = entries(git, env, *args, **kwargs)
+        result = read_index(git, env, *args, **kwargs)
         if Path(env.get("GIT_INDEX_FILE", "")).name == "original-index":
             gate("snapshot")
         return result
 
-    core._entries = observed_entries
+    setattr(core, reader_name, observed_entries)
     verify = core._verify_prepared_head
 
     def observed_verify(*args, **kwargs):

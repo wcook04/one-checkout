@@ -14,8 +14,9 @@ other staged changes and every working file. You decide which edits belong in it
 Improved with public feedback from **Skitter** (staging warning and next-owner guide),
 **Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
 **lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
-and executable next-commit reversal)
-and **tanod** (the native post-commit staging example).
+and executable next-commit reversal),
+**tanod** (the native post-commit staging example) and **Penny** (the question
+that prompted verification-cost measurement).
 [Contributions and source reports](CONTRIBUTING.md).
 
 ## Try it before installing
@@ -53,7 +54,8 @@ the two snapshots and commit IDs in `follow_on_control`.
 
 The demo also shows that native Git can build the same A-only commit. One Checkout
 packages those primitives with scope, parent, branch, preservation and recovery
-checks. This is a behaviour demonstration, not a productivity benchmark.
+checks. This is a behaviour demonstration, not a productivity benchmark. For isolated
+runtime measurements and their limits, see the [performance experiment](docs/performance.md).
 
 ## The problem
 
@@ -316,6 +318,7 @@ checkout. The [architecture](docs/architecture.md) and
 | [Installed skill](skills/one-checkout/SKILL.md) and [bundle](skills/one-checkout/bundle.json) | Agent workflow and complete copied payload |
 | [Installer](scripts/install.py) and [demo](scripts/demo.py) | Distribution and runnable first-use example |
 | [tests/](tests/) and [scripts/](scripts/) | Regression checks, comparisons, stress and evaluation tools |
+| [Benchmark](scripts/benchmark.py) and [performance notes](docs/performance.md) | Paired runtime timings, setup/verification costs and limits |
 | [Layout policy](docs/repository_layout.json) | Enforced directory roles and required interfaces |
 
 Questions and bug reports belong in [GitHub issues](https://github.com/wcook04/one-checkout/issues);
