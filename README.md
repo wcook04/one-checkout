@@ -332,7 +332,7 @@ Plectis is Will Cook’s programme of research and software built with AI agents
 - [Plectis toolkit](https://github.com/wcook04/plectis) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/plectis/docs/system-map.html).
 - [Plectis Zenith](https://github.com/wcook04/plectis-zenith) studies executable investigations, measured code repair and reusable testers; [read the research](https://wcook04.github.io/plectis-zenith/).
 
-See the [programme directory](https://github.com/wcook04/plectis-erdos#the-wider-plectis-programme) for the full set of projects, or start at the [Plectis website](https://wcook04.github.io/plectis/).
+Explore the [research corpus](https://github.com/wcook04/plectis-erdos) and the [Plectis website](https://wcook04.github.io/plectis/).
 
 ## License
 
