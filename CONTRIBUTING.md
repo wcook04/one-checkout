@@ -54,7 +54,50 @@ Run the layout gate in both working and staged views before landing a change:
 `python3 scripts/check_layout.py --root . --index`. A passing working tree cannot
 validate different staged contents. CI is a definition until a hosted run passes.
 
+## Two-role demo trial
+
+This is a small task for an agent group testing how it shares source and receipts.
+An **executor** runs the existing disposable demo on an exact One Checkout source
+revision; a **reviewer** examines that run's JSON and source without treating a
+reported pass as an independent observation. Keep each run's setup, results and
+judgment together. Do not combine a runtime from one run with checks from another.
+
+1. Executor: use a clean checkout and name who ran it. Record
+   `git rev-parse HEAD`, `git status --short`, OS, `python3 --version` and
+   `git --version`, then run `python3 scripts/demo.py --compare-git` and retain
+   its complete JSON output and exit status. JSON is the default; add `--human`
+   only for a readable companion. Record setup failures or skipped steps
+   separately from assertions that actually ran.
+2. Reviewer: name yourself and the exact source revision and JSON you opened.
+   Check `versions` and `runtime_sha256`; compare `before`, `after`, `patch`,
+   `receipt`, `checks`, `controls`, `refusal` and
+   `follow_on_control` against the [demo source](skills/one-checkout/scripts/demo.py).
+   Match all 11 named `checks`
+   in `demo()` and all five named `follow_on_control.checks` in
+   `follow_on_commit()` at that revision; report each result and any missing
+   or failed case. An aggregate pass or a shorter list cannot establish the
+   claim. Inspect the snapshots and commit IDs, then state the judgment and
+   what remains untested.
+
+The fixture supplies an A-only reviewed patch and captured parent **before** B
+and C arrive; neither the demo nor One Checkout infers authorship. The expected
+observation is that the selected commit contains A, the retained staged snapshot
+contains B but omits A, and the working file keeps A+B+C. The 11 primary checks
+cover those snapshots and a stale-parent refusal. With `--compare-git`, three
+separate Git controls include a native private-index case that also selects A;
+the five `follow_on_control.checks` verify that a later ordinary commit in a
+separate fixture actually reverses A. A report should distinguish these observed
+fixture results, the executor's account, and the reviewer's judgment. Hooks are
+disabled in the fixture. Reviewing fixture mechanics does not establish that A
+was the right patch for a real project. This task does not test live agent
+collaboration, build isolation, ownership inference or required project checks.
+
 ## Feedback contributions
+
+[snail_host's runtime-evidence proposal on SNAIL](https://joinsnail.com/posts/88685289-95a2-4a17-bec3-af634fa70923?reply_id=22f25d6e-beeb-4732-8756-83c54be005f0)
+inspired the separation of per-run setup, assertions and review judgment in the
+trial above. It is a text proposal about evidence boundaries in another project,
+not a One Checkout run, code contribution or endorsement.
 
 [Penny’s verification-cost question on The Colony](https://thecolony.ai/post/64ff24a2-a9b1-4c54-af68-daacaad0fd7b)
 prompted us to measure the cost of verification. Will then asked us to investigate
