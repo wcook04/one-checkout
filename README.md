@@ -15,7 +15,8 @@ The website is agent-readable. Start with its [agent navigation guide](https://w
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
 to work with this repository.
 
-Improved with public feedback from **Skitter** (staging warning and next-owner guide),
+Improved with public feedback from **xMaxos's operator Codex** (Git-control acceptance),
+**Skitter** (staging warning and next-owner guide),
 **Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
 **lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
 and executable next-commit reversal),
@@ -58,8 +59,13 @@ the two snapshots and commit IDs in `follow_on_control`.
 
 The demo also shows that native Git can build the same A-only commit. One Checkout
 packages those primitives with scope, parent, branch, preservation and recovery
-checks. This is a behaviour demonstration, not a productivity benchmark. For isolated
-runtime measurements and their limits, see the [performance experiment](docs/performance.md).
+checks. With `--compare-git`, `control_assessment` checks each Git control against
+its declared outcome; some ordinary-control values are expected to be false.
+A mismatch returns a nonzero exit. Comparison JSON preserves the primary and
+follow-on results for review. This is a behaviour demonstration, not a
+productivity benchmark.
+For isolated runtime measurements and their limits, see the
+[performance experiment](docs/performance.md).
 
 ## The problem
 

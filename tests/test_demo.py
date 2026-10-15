@@ -1,6 +1,9 @@
 """Executable first-run contract, fair Git controls and safe temporary routing."""
 from __future__ import annotations
+import contextlib
+import copy
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
@@ -35,6 +38,9 @@ class DemoTests(unittest.TestCase):
 
     def test_controls_include_capable_native_git(self) -> None:
         ordinary, file_only, native = self.result["controls"]
+        self.assertEqual(self.result["control_assessment"]["status"], "passed")
+        self.assertEqual(self.result["control_assessment"]["mismatches"], [])
+        self.assertEqual(self.result["control_assessment"]["expected"], module.CONTROL_EXPECTATIONS)
         self.assertFalse(ordinary["selected_commit"])
         self.assertFalse(ordinary["foreign_staged_file_excluded"])
         self.assertFalse(file_only["selected_commit"])
@@ -42,6 +48,36 @@ class DemoTests(unittest.TestCase):
         self.assertTrue(native["selected_commit"])
         self.assertTrue(native["shared_index_blob_preserved"])
         self.assertTrue(native["worktree_preserved"])
+
+    def test_declared_false_values_and_complete_control_list_are_required(self) -> None:
+        controls = copy.deepcopy(self.result["controls"])
+        controls[0]["selected_commit"] = True
+        assessment = module.assess_git_controls(controls)
+        self.assertEqual(assessment["status"], "failed")
+        self.assertIn({"index": 0, "command": "git commit", "field": "selected_commit",
+                       "expected": False, "observed": True}, assessment["mismatches"])
+        self.assertEqual(module.assess_git_controls(self.result["controls"][:2])["status"], "failed")
+
+    def test_native_control_failure_does_not_hide_primary_or_follow_on_results(self) -> None:
+        controls = copy.deepcopy(self.result["controls"])
+        controls[2]["selected_commit"] = False  # Synthetic mutation, not an observed Git failure.
+        with mock.patch.object(module, "compare_git", return_value=controls):
+            result = module.demo(compare=True)
+        self.assertEqual(result["status"], "demo_comparison_failed")
+        self.assertTrue(all(result["checks"].values()))
+        self.assertTrue(all(result["follow_on_control"]["checks"].values()))
+        self.assertIn({"index": 2, "command": "native private index", "field": "selected_commit",
+                       "expected": True, "observed": False},
+                      result["control_assessment"]["mismatches"])
+        human = module.render_human(result)
+        self.assertIn("GIT CONTROL COMPARISON FAILED", human)
+        self.assertNotIn("Native private-index Git also selects A", human)
+        output = io.StringIO()
+        with mock.patch.object(module, "demo", return_value=result), \
+                mock.patch.object(sys, "argv", ["demo.py", "--compare-git"]), \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(module.main(), 2)
+        self.assertEqual(json.loads(output.getvalue())["status"], "demo_comparison_failed")
 
     def test_follow_on_control_observes_actual_reversal_in_separate_fixture(self) -> None:
         r = self.result
@@ -87,7 +123,9 @@ class DemoTests(unittest.TestCase):
         r = subprocess.run([sys.executable, "-B", "-I", str(ROOT / "scripts/demo.py")],
                            capture_output=True, timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout)["status"], "demo_passed")
+        result = json.loads(r.stdout)
+        self.assertEqual(result["status"], "demo_passed")
+        self.assertNotIn("control_assessment", result)
 
     def test_missing_tool_fails_without_success_output(self) -> None:
         r = subprocess.run([sys.executable, "-B", "-I", str(ROOT / "scripts/demo.py"),
