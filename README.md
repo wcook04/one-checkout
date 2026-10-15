@@ -2,22 +2,58 @@
 
 Commit one agent's fix without including another agent's unfinished edits.
 
-Improved with public feedback from **Skitter** (staging warning and next-owner guide), **Dione**
-(missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary and executable next-commit reversal)
+When Claude Code, Codex, or several sessions share one project folder, their edits
+can get mixed together. One Checkout commits a **reviewed patch** while preserving
+other staged changes and every working file. You decide which edits belong in it.
+
+[Plectis website](https://wcook04.github.io/plectis/) ·
+[Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
+[Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
+[Video plans](#videos)
+
+Improved with public feedback from **Skitter** (staging warning and next-owner guide),
+**Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
+**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
+and executable next-commit reversal)
 and **tanod** (the native post-commit staging example).
-[Contribution details and source reports](CONTRIBUTING.md).
+[Contributions and source reports](CONTRIBUTING.md).
 
-When **Claude Code, Codex, or several agent sessions share one project folder**,
-their edits can end up mixed together. One Checkout helps you save a specific,
-reviewed change as a Git commit without including the other edits or rearranging
-the files everyone is working on.
+## Try it before installing
 
-[The problem](#the-problem) · [What it does](#what-one-checkout-does) ·
-[Install](#install-for-claude-code-and-codex) · [Ask your agent](#use-it-with-your-agent) ·
-[Try the demo](#try-it-before-installing) · [Direct CLI](#review-and-commit-a-patch) ·
-[Outcomes](#outcomes-and-recovery) · [Locking and parent checks](#locking-and-parent-checks) · [Limits](#boundaries) ·
-[Architecture and contributing](#verify-and-contribute) · [License](#license)
+Requires Python 3.10+, Git 2.39+, and macOS or Linux. No packages, server or model
+credentials are needed.
+
+```sh
+git clone --depth 1 https://github.com/wcook04/one-checkout.git
+cd one-checkout
+python3 scripts/demo.py --human --compare-git
+python3 scripts/try_install.py --human
+```
+
+Both commands use disposable fixtures. They neither install into your real home
+nor launch an AI model. The second rehearses installation for both hosts at user
+and project scope, including operation after its temporary source is removed.
+
+The demo puts three changes in the **same file**: A is the reviewed patch,
+B is another staged change, and C is an unstaged change.
+
+| State | Before | After committing A |
+|---|---|---|
+| Latest commit (HEAD) | Base | Base + A |
+| Staged snapshot | Base + B | Base + B |
+| Working file | Base + A + B + C | Base + A + B + C |
+
+**Review the preserved staging before the next commit.** Its snapshot can still
+lack A, so a later ordinary `git commit` can reverse A. Preservation does not
+rebase B onto A. The result identifies paths needing
+[staging review](docs/staging_handoff.md). The demo checks that its receipt emits
+the divergence warning. With `--compare-git`, a separate disposable fixture
+actually makes that ordinary next commit and shows A being reverted; JSON saves
+the two snapshots and commit IDs in `follow_on_control`.
+
+The demo also shows that native Git can build the same A-only commit. One Checkout
+packages those primitives with scope, parent, branch, preservation and recovery
+checks. This is a behaviour demonstration, not a productivity benchmark.
 
 ## The problem
 
@@ -44,77 +80,47 @@ folder that contains several people's or agents' unfinished changes.**
 
 ## What One Checkout does
 
-You or your agent first prepare a **reviewed patch**: a diff containing exactly
-the edits you intend to commit. In the example, that patch contains the token fix
-and nothing from the refactor or debugging work.
+You or your agent prepare a patch containing exactly the change you intend to
+commit. One Checkout applies it to the captured starting commit in a separate
+Git index, checks the allowed paths, and commits that candidate. If the branch
+has moved, it refuses so you can review the new situation.
 
-One Checkout uses that patch to build and commit the selected change separately
-from the shared staging area. It checks the allowed files and the starting commit,
-preserves other staged changes, and leaves every working file untouched. If the
-branch has moved since the patch's captured starting commit, it refuses so you
-can review the new situation.
+The working files keep all their edits. Other people's staged snapshots stay
+staged. **Review the staging handoff:** a preserved snapshot can lack the fix you
+just committed, so a later ordinary commit could undo it. Staged and working
+diffs can therefore differ after a successful commit. The
+[handoff guide](docs/staging_handoff.md) explains the comparisons and the next
+writer's review, including a native-Git example.
 
-After a successful commit, Git history contains the token fix. The working file
-still contains the token fix, unfinished refactor and debugging output. Other
-people's staged changes remain staged.
+The package contains a small Python command and an installable skill for Claude
+Code and Codex. It uses Git's existing mechanisms, with explicit scope, parent,
+preservation and recovery checks.
 
-**There is a handoff to review:** preserved staging can still contain the old
-version of the token check. A later ordinary commit of that staging could undo
-the fix. One Checkout reports this and tells the next writer to review it; it
-does not silently rewrite someone else's staged work. See
-[staging handoff](docs/staging_handoff.md).
-
-**Must the staged and working diffs match afterward?** They can differ. The
-A-only fixture keeps the staged B snapshot and all A+B+C working bytes. Comparing
-each against the new HEAD therefore gives different deltas. One Checkout leaves
-B and C for their owners to review; it does not clean up their overlap or reconcile
-their intent. If your task needs isolated editing or a coherent build snapshot,
-use the corresponding worktree workflow. The staging guide shows all three
-comparisons and the specific next handoff.
-
-
-The package is a small Python command plus a skill that teaches **Claude Code and
-Codex** how to use it and interpret the result. Git supplies the underlying
-mechanism; One Checkout packages it with checks and recovery guidance for agents.
-
-**Can native Git also bring A into the shared staging area?** Yes, when the
-reviewed A patch applies to that staged snapshot. Tanod's native-index example
-prompted a two-case check: applying A after the branch update succeeds when B
-lies outside the patch context, but can fail when B changes that context. In the
-latter case A is already committed while the shared index still omits it.
-Updating the branch and then applying a patch to shared staging are two writes;
-the branch's old-OID check does not protect that later staging step. Inspect the
-actual branch and staged snapshot before any further action. One Checkout's
-preservation contract leaves that owner handoff explicit.
-
-**You still decide which edits belong in the commit.** It cannot recover authorship
-from a mixed file, stop agents overwriting each other's edits, or make unfinished
-code correct. It is useful when you deliberately share one project folder and
-can identify the change to commit. For separate editing environments, use Git
-worktrees; for an ordinary single-owner commit, normal Git is usually simpler.
-See [choosing a workflow](docs/choosing_a_workflow.md).
-
-For example, if two writers append to one shared note and neither retains a
-separate reviewed patch, One Checkout cannot decide which lines belong to each
-writer. Establish and review that patch before invoking the tool. Restoring an
-old file or deleting the other writer's section from the shared working file
-would change their work; use the [patch-selection guide](skills/one-checkout/references/patch-selection.md)
-to prepare a candidate separately.
+It cannot infer authorship from a mixed file, stop writers overwriting each
+other, or make unfinished code correct. If nobody retained a separate patch,
+prepare and review one without removing other edits from the shared files; see
+[patch selection](skills/one-checkout/references/patch-selection.md).
+For independent editing environments, use Git worktrees. For a single owner's
+ordinary commit, normal Git is usually simpler. See
+[choosing a workflow](docs/choosing_a_workflow.md).
 
 ## Install for Claude Code and Codex
 
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
+The demo above follows current `main`. Install the tagged `v0.1.0` release
+from a separate clone. If you just ran the demo, use `cd ..` first to return to
+its parent directory; the two source folders can then sit beside each other:
+
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
-cd one-checkout
+git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.1.0
+cd one-checkout-v0.1.0
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
 
-Want to inspect the behaviour first? After cloning, run the
-[disposable demo](#try-it-before-installing) before the install commands.
+The [installation guide](docs/installation.md) also covers upgrades and removal.
 
 The installer copies a complete skill into:
 
@@ -154,40 +160,6 @@ The expected parent is a commit in **your target project**, not the version of
 One Checkout. For mixed hunks or new/deleted files, follow
 [patch selection](skills/one-checkout/references/patch-selection.md). Never remove
 other people's edits from the shared checkout just to manufacture a patch.
-
-## Try it before installing
-
-From the cloned source directory:
-
-```sh
-python3 scripts/demo.py --human --compare-git
-python3 scripts/try_install.py --human
-```
-
-Both commands use disposable fixtures. They neither install into your real home
-nor launch an AI model. The second rehearses installation for both hosts at user
-and project scope, including operation after its temporary source is removed.
-
-The demo puts three changes in the **same file**: A is the reviewed patch,
-B is another staged change, and C is an unstaged change.
-
-| State | Before | After committing A |
-|---|---|---|
-| Latest commit (HEAD) | Base | Base + A |
-| Staged snapshot | Base + B | Base + B |
-| Working file | Base + A + B + C | Base + A + B + C |
-
-**Review the preserved staging before the next commit.** Its snapshot can still
-lack A, so a later ordinary `git commit` can reverse A. Preservation does not
-rebase B onto A. The result identifies paths needing
-[staging review](docs/staging_handoff.md). The demo checks that its receipt emits
-the divergence warning. With `--compare-git`, a separate disposable fixture
-actually makes that ordinary next commit and shows A being reverted; JSON saves
-the two snapshots and commit IDs in `follow_on_control`.
-
-The demo also shows that native Git can build the same A-only commit. One Checkout
-packages those primitives with scope, parent, branch, preservation and recovery
-checks. This is a behaviour demonstration, not a productivity benchmark.
 
 ## Review and commit a patch
 
@@ -306,6 +278,16 @@ or unsettled result before retrying. See [transaction safety](docs/transaction_s
 
 Read [transaction safety](docs/transaction_safety.md) and
 [security reporting](SECURITY.md) for the full boundary.
+
+## Videos
+
+| Film | Status | What it introduces |
+|---|---|---|
+| [Introduction](https://wcook04.github.io/plectis/#film-introduction) | Coming soon | The wider Plectis project and its tools for inspecting agent work. |
+| [One Checkout walkthrough](https://wcook04.github.io/plectis/#film-one-checkout) | Coming soon | Choosing a patch, preserving unfinished edits and reviewing the staging handoff. |
+
+These are reserved sections on the project website. The films are being prepared;
+no video is published at these links yet.
 
 ## Verify and contribute
 
