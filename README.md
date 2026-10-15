@@ -324,6 +324,16 @@ vulnerabilities through [SECURITY.md](SECURITY.md). Maintainer:
 [wcook04](https://github.com/wcook04). Code and documentation were prepared with
 AI assistance under human direction; [provenance](docs/provenance.md) records prior art.
 
+## Where One Checkout fits
+
+Plectis is Will Cook’s programme of research and software built with AI agents. The aim is to make the resulting work understandable enough for other people to inspect, question and build on. One Checkout handles a practical part of agent collaboration: landing a reviewed patch without including unfinished work.
+
+- [Safety Core](https://github.com/wcook04/safety-core) provides editable agent rules, hooks and a map of where checks apply.
+- [Plectis toolkit](https://github.com/wcook04/plectis) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/plectis/docs/system-map.html).
+- [Plectis Zenith](https://github.com/wcook04/plectis-zenith) studies executable investigations, measured code repair and reusable testers; [read the research](https://wcook04.github.io/plectis-zenith/).
+
+See the [programme directory](https://github.com/wcook04/plectis-erdos#the-wider-plectis-programme) for the full set of projects, or start at the [Plectis website](https://wcook04.github.io/plectis/).
+
 ## License
 
 [MIT](LICENSE), copyright One Checkout contributors.
