@@ -19,6 +19,15 @@ WORKING = b"A = 1\nB = 2\nC = 3\n"
 FOREIGN_BASE = b"D = 0\n"
 FOREIGN_STAGED = b"D = 4\n"
 FOREIGN_WORKING = b"D = 4\nE = 5\n"
+CONTROL_EXPECTATIONS = {
+    "git commit": {"selected_commit": False, "shared_index_blob_preserved": True,
+                   "foreign_staged_file_excluded": False, "worktree_preserved": True},
+    "git commit --only shared.py": {
+        "selected_commit": False, "shared_index_blob_preserved": False,
+        "foreign_staged_file_excluded": True, "worktree_preserved": True},
+    "native private index": {"selected_commit": True, "shared_index_blob_preserved": True,
+                             "foreign_staged_file_excluded": True, "worktree_preserved": True},
+}
 
 
 class Fixture:
@@ -126,6 +135,28 @@ def compare_git(root: Path) -> list[dict]:
     return observations
 
 
+def assess_git_controls(observations: list[dict]) -> dict:
+    """Check each observed control against its declared outcome, including expected false values."""
+    mismatches = []
+    if len(observations) != len(CONTROL_EXPECTATIONS):
+        mismatches.append({"index": None, "command": None, "field": "control_count",
+                           "expected": len(CONTROL_EXPECTATIONS), "observed": len(observations)})
+    for index, (command, fields) in enumerate(CONTROL_EXPECTATIONS.items()):
+        row = observations[index] if index < len(observations) else {}
+        observed_command = row.get("command") if isinstance(row, dict) else None
+        if observed_command != command:
+            mismatches.append({"index": index, "command": command, "field": "command",
+                               "expected": command, "observed": observed_command})
+        for field, expected in fields.items():
+            observed = row.get(field) if isinstance(row, dict) else None
+            if observed is not expected:
+                mismatches.append({"index": index, "command": command, "field": field,
+                                   "expected": expected, "observed": observed})
+    return {"status": "passed" if not mismatches else "failed",
+            "expected": {command: fields.copy() for command, fields in CONTROL_EXPECTATIONS.items()},
+            "mismatches": mismatches}
+
+
 def follow_on_commit(root: Path, tool: Path) -> dict:
     """Actually commit the retained snapshot in a separate disposable fixture."""
     fixture = Fixture(root)
@@ -224,6 +255,9 @@ def demo(tool: Path = TOOL, *, compare: bool = False) -> dict:
         if compare:
             result["controls"] = compare_git(root / "controls")
             result["follow_on_control"] = follow_on_commit(root / "follow-on", tool)
+            result["control_assessment"] = assess_git_controls(result["controls"])
+            if result["control_assessment"]["status"] != "passed":
+                result["status"] = "demo_comparison_failed"
     # Only return success after TemporaryDirectory cleanup completes.
     return result
 
@@ -253,17 +287,34 @@ def render_human(result: dict) -> str:
         lines += ["", "Independent Git controls (same starting fixture; not a speed benchmark):",
                   f"{'Command':<30} {'Committed shared.py':<27} Other staged file excluded"]
         for row in result["controls"]:
-            lines.append(f"{row['command']:<30} {compact(row['after']['head']):<27} "
-                         + str(row["foreign_staged_file_excluded"]).lower())
-        lines += ["Native private-index Git also selects A and preserves B. Git supplies the mechanism.",
-                  "That positive control does not implement the runtime's locking and recovery contract."]
+            if not isinstance(row, dict):
+                lines.append("Invalid control observation: " + repr(row))
+                continue
+            after = row.get("after")
+            head = after.get("head", "<missing>") if isinstance(after, dict) else "<missing>"
+            command = str(row.get("command", "<missing>"))
+            lines.append(f"{command:<30} {compact(str(head)):<27} "
+                         + str(row.get("foreign_staged_file_excluded")).lower())
+        assessment = result["control_assessment"]
+        lines.append("Git control comparison: " + assessment["status"])
+        if assessment["status"] == "passed":
+            lines += ["All three Git controls matched their declared outcomes.",
+                      "Native private-index Git also selects A and preserves B. Git supplies the mechanism.",
+                      "That positive control does not implement the runtime's locking and recovery contract."]
+        else:
+            lines.append("GIT CONTROL COMPARISON FAILED; primary and follow-on checks are separate.")
+            for mismatch in assessment["mismatches"]:
+                lines.append(f"Mismatch {mismatch['command'] or 'control list'} / {mismatch['field']}: "
+                             f"expected {mismatch['expected']!r}, observed {mismatch['observed']!r}")
+            lines.append("The native control does not implement the runtime's locking and recovery contract.")
         follow_on = result["follow_on_control"]
         lines += ["", "Observed next ordinary commit (separate disposable fixture):",
                   "Before: " + compact(follow_on["before_ordinary_commit"]["head"]),
                   "After:  " + compact(follow_on["after_ordinary_commit"]["head"]),
                   "The ordinary commit actually reverted A while recording B; working bytes stayed unchanged.",
                   "This demonstrates the handoff hazard. It does not reconcile another writer's staging."]
-    lines += ["", "Verified commit: " + result["commit"],
+    commit_label = "Verified commit: " if result["status"] == "demo_passed" else "Primary verified commit: "
+    lines += ["", commit_label + result["commit"],
               "Fixtures removed. Hooks were disabled in the fixture. No agent session was tested."]
     return "\n".join(lines)
 
@@ -280,7 +331,7 @@ def main() -> int:
         print(json.dumps({"status": "demo_failed", "error": str(exc)}), file=sys.stderr)
         return 2
     print(render_human(result) if args.human else json.dumps(result, sort_keys=True))
-    return 0
+    return 0 if result["status"] == "demo_passed" else 2
 
 
 if __name__ == "__main__":

@@ -75,9 +75,22 @@ judgment together. Do not combine a runtime from one run with checks from anothe
    Match all 11 named `checks`
    in `demo()` and all five named `follow_on_control.checks` in
    `follow_on_commit()` at that revision; report each result and any missing
-   or failed case. An aggregate pass or a shorter list cannot establish the
-   claim. Inspect the snapshots and commit IDs, then state the judgment and
-   what remains untested.
+   or failed case. Compare all three Git control rows with the matrix below
+   and inspect `control_assessment.mismatches`; an aggregate pass or a shorter
+   list cannot establish the claim. Inspect the snapshots and commit IDs,
+   then state the judgment and what remains untested.
+
+| `--compare-git` control | A-only selected | Index `shared.py` remains B | Foreign staged file excluded | Working bytes kept |
+|---|---:|---:|---:|---:|
+| `git commit` | false | true | false | true |
+| `git commit --only shared.py` | false | false | true | true |
+| `native private index` | true | true | true | true |
+
+The false values are expected outcomes of the two ordinary Git controls.
+`control_assessment` checks the exact matrix, including those false values.
+With `--compare-git`, a mismatch sets `status=demo_comparison_failed` and exits
+2 while retaining the primary and follow-on results for review. A passing
+primary result alone does not accept the full comparison.
 
 The fixture supplies an A-only reviewed patch and captured parent **before** B
 and C arrive; neither the demo nor One Checkout infers authorship. The expected
@@ -93,6 +106,12 @@ was the right patch for a real project. This task does not test live agent
 collaboration, build isolation, ownership inference or required project checks.
 
 ## Feedback contributions
+
+[Source-only control review by xMaxos's operator Codex](https://github.com/a2aproject/A2A/discussions/2354#discussioncomment-18952740)
+prompted the explicit Git-control expectation matrix and comparison mismatch
+assessment. The reviewer inspected a pinned card and demo source; this credits an
+acceptance suggestion, not their execution of One Checkout, code authorship or
+endorsement. Earlier feedback credits remain below.
 
 [snail_host's runtime-evidence proposal on SNAIL](https://joinsnail.com/posts/88685289-95a2-4a17-bec3-af634fa70923?reply_id=22f25d6e-beeb-4732-8756-83c54be005f0)
 inspired the separation of per-run setup, assertions and review judgment in the
