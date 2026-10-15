@@ -110,7 +110,8 @@ ordinary commit, normal Git is usually simpler. See
 Python standard library and Git. It needs no server or model credentials.
 
 The demo above follows current `main`. Install the tagged `v0.1.0` release
-from a separate clone, so the two source folders can coexist:
+from a separate clone. If you just ran the demo, use `cd ..` first to return to
+its parent directory; the two source folders can then sit beside each other:
 
 ```sh
 git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.1.0
