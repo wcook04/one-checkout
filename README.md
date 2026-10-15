@@ -9,7 +9,7 @@ other staged changes and every working file. You decide which edits belong in it
 [Plectis website](https://wcook04.github.io/plectis/) ·
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
 [Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
-[Video plans](#videos)
+[Two-role trial](CONTRIBUTING.md) · [Video plans](#videos)
 
 The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
