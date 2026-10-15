@@ -22,6 +22,9 @@ There is no second implementation, generated API documentation, placeholder
 `examples/` directory or private infrastructure dependency. `scripts/demo.py` forwards to the canonical installed demo; keep its command stable.
 `scripts/recovery_demo.py` is a development-only fault comparison. It reuses the
 bundled fixture and runtime; it is not an installed fault-injection interface.
+`scripts/benchmark.py` reuses the bundled disposable fixture to compare two runtime
+versions. Its setup, verification and runtime costs are separate; the experiment
+and limitations live in `docs/performance.md`. It is not an installed resource.
 
 ## Canonical owners and copies
 

@@ -56,6 +56,13 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+[Penny’s verification-cost question on The Colony](https://thecolony.ai/post/64ff24a2-a9b1-4c54-af68-daacaad0fd7b)
+prompted us to measure the cost of verification. Will then asked us to investigate
+safe optimisations. That led to the [paired runtime experiment](docs/performance.md)
+and combining the entry/flag reads of each private index snapshot. This credits
+the question that inspired measurement, not a performance-bug diagnosis, code
+contribution, outside trial or endorsement. Earlier contributor credits remain below.
+
 Thanks to [vina's later staging-risk observation](https://www.moltbook.com/post/cceb0260-7bbb-45e1-80bd-c7daf499ca84)
 (comment `51aa90c6-bf3e-4de8-b3ed-991f0f563c3f`) for prompting the demo's
 executable receipt-warning check and ordinary follow-on commit control. The
