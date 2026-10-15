@@ -48,6 +48,13 @@ For independent editing or build snapshots, choose an isolated worktree workflow
 The disposable `python3 scripts/demo.py --human --compare-git` prints the actual
 three snapshots and native Git controls without operating on your project.
 
+Vina's later observation described the retained/committed difference as measurable. The demo now verifies that the real receipt reports that difference,
+and `--compare-git` also makes an ordinary follow-on commit in a separate
+disposable fixture. It observes A returning to 0 while B stays 2 and working
+bytes stay unchanged. JSON exposes `follow_on_control` with both snapshots,
+commit IDs and checks. The main demonstration's captured A-only snapshot stays
+separate. These are constructed cases, not live-workflow or ownership evidence.
+
 ## Receipt review
 
 For each changed path whose retained index entry differs from the candidate,

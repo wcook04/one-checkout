@@ -43,6 +43,36 @@ class DemoTests(unittest.TestCase):
         self.assertTrue(native["shared_index_blob_preserved"])
         self.assertTrue(native["worktree_preserved"])
 
+    def test_follow_on_control_observes_actual_reversal_in_separate_fixture(self) -> None:
+        r = self.result
+        control = r["follow_on_control"]
+        self.assertTrue(all(control["checks"].values()))
+        self.assertEqual(control["before_ordinary_commit"]["head"], module.OWNED.decode())
+        self.assertEqual(control["after_ordinary_commit"]["head"], module.STAGED.decode())
+        self.assertNotEqual(control["selected_commit"], control["ordinary_commit"])
+        self.assertNotEqual(control["selected_commit"], r["commit"])
+        self.assertEqual(r["after"]["head"], module.OWNED.decode())
+        self.assertTrue(r["checks"]["preserved_staging_risk_is_reported"])
+
+    def test_missing_staging_warning_cannot_get_a_demo_pass(self) -> None:
+        original_execute = module.Fixture.execute
+
+        def without_warning(fixture, argv, **kwargs):
+            result = original_execute(fixture, argv, **kwargs)
+            if len(argv) > 3 and argv[3] == "commit" and result.returncode == 0:
+                receipt = json.loads(result.stdout)
+                receipt["warnings"] = []
+                return subprocess.CompletedProcess(result.args, result.returncode,
+                    json.dumps(receipt).encode(), result.stderr)
+            return result
+
+        with tempfile.TemporaryDirectory(dir=os.environ.get("ONE_CHECKOUT_TEST_TMPDIR")) as raw:
+            with mock.patch.dict(os.environ, {"ONE_CHECKOUT_TEST_TMPDIR": raw}), \
+                    mock.patch.object(module.Fixture, "execute", without_warning):
+                with self.assertRaisesRegex(RuntimeError, "preserved_staging_risk_is_reported"):
+                    module.demo(compare=True)
+            self.assertEqual(list(Path(raw).iterdir()), [])
+
     def test_human_output_has_limits_and_real_refusal(self) -> None:
         text = module.render_human(self.result)
         self.assertIn(self.result["commit"], text)
@@ -50,6 +80,7 @@ class DemoTests(unittest.TestCase):
         self.assertIn("Sequential stale-parent", text)
         self.assertIn("not a speed benchmark", text)
         self.assertIn("an ordinary commit of that snapshot can undo A", text)
+        self.assertIn("ordinary commit actually reverted A", text)
         self.assertEqual(self.result["refusal"]["exit_code"], 2)
 
     def test_default_cli_remains_json(self) -> None:
@@ -81,7 +112,7 @@ class DemoTests(unittest.TestCase):
     def test_routed_fixtures_are_removed(self) -> None:
         with tempfile.TemporaryDirectory(dir=os.environ.get("ONE_CHECKOUT_TEST_TMPDIR")) as raw:
             with mock.patch.dict(os.environ, {"ONE_CHECKOUT_TEST_TMPDIR": raw}):
-                module.demo()
+                module.demo(compare=True)
             self.assertEqual(list(Path(raw).iterdir()), [])
 
     def test_failed_runtime_does_not_get_a_pass_and_fixture_is_removed(self) -> None:

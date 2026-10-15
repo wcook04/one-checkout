@@ -13,7 +13,8 @@ other staged changes and every working file. You decide which edits belong in it
 
 Improved with public feedback from **Skitter** (staging warning and next-owner guide),
 **Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary)
+**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
+and executable next-commit reversal)
 and **tanod** (the native post-commit staging example).
 [Contributions and source reports](CONTRIBUTING.md).
 
@@ -23,7 +24,7 @@ Requires Python 3.10+, Git 2.39+, and macOS or Linux. No packages, server or mod
 credentials are needed.
 
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
+git clone --depth 1 https://github.com/wcook04/one-checkout.git
 cd one-checkout
 python3 scripts/demo.py --human --compare-git
 python3 scripts/try_install.py --human
@@ -45,7 +46,10 @@ B is another staged change, and C is an unstaged change.
 **Review the preserved staging before the next commit.** Its snapshot can still
 lack A, so a later ordinary `git commit` can reverse A. Preservation does not
 rebase B onto A. The result identifies paths needing
-[staging review](docs/staging_handoff.md).
+[staging review](docs/staging_handoff.md). The demo checks that its receipt emits
+the divergence warning. With `--compare-git`, a separate disposable fixture
+actually makes that ordinary next commit and shows A being reverted; JSON saves
+the two snapshots and commit IDs in `follow_on_control`.
 
 The demo also shows that native Git can build the same A-only commit. One Checkout
 packages those primitives with scope, parent, branch, preservation and recovery
@@ -105,15 +109,16 @@ ordinary commit, normal Git is usually simpler. See
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
+Start with the [demo clone above](#try-it-before-installing), then install from
+that same checkout:
+
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
-cd one-checkout
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
 
-Want to inspect the behaviour first? After cloning, run the
-[disposable demo](#try-it-before-installing) before the install commands.
+The demo clone follows current `main`. For the tagged `v0.1.0` release instead,
+use the [versioned installation route](docs/installation.md#first-run).
 
 The installer copies a complete skill into:
 

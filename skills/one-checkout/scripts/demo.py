@@ -126,6 +126,32 @@ def compare_git(root: Path) -> list[dict]:
     return observations
 
 
+def follow_on_commit(root: Path, tool: Path) -> dict:
+    """Actually commit the retained snapshot in a separate disposable fixture."""
+    fixture = Fixture(root)
+    receipt = json.loads(fixture.execute([sys.executable, "-B", str(tool), "commit",
+                                           *fixture.arguments(), "--message", "Select A first"]).stdout)
+    landed = fixture.snapshot()
+    fixture.git("commit", "-q", "-m", "Ordinary follow-on commit of retained staging")
+    after = fixture.snapshot()
+    checks = {
+        "selected_commit_contains_A": landed["head"] == OWNED.decode(),
+        "retained_index_differs_from_selected_commit": landed["index"] == STAGED.decode()
+            and landed["index"] != landed["head"],
+        "ordinary_commit_reverses_A": after["head"] == STAGED.decode(),
+        "ordinary_commit_follows_selected_commit":
+            fixture.git("rev-parse", "HEAD^").decode().strip() == receipt["new_commit"],
+        "working_bytes_unchanged": all(after[k] == landed[k]
+            for k in ("worktree", "foreign_worktree", "untracked")),
+    }
+    if not all(checks.values()):
+        raise RuntimeError("follow-on control failed: " + json.dumps(checks))
+    return {"selected_commit": receipt["new_commit"],
+            "ordinary_commit": fixture.git("rev-parse", "HEAD").decode().strip(),
+            "before_ordinary_commit": landed, "after_ordinary_commit": after,
+            "checks": checks}
+
+
 def demo(tool: Path = TOOL, *, compare: bool = False) -> dict:
     tool = tool.resolve()
     if not tool.is_file():
@@ -165,6 +191,16 @@ def demo(tool: Path = TOOL, *, compare: bool = False) -> dict:
                 cached_diff[cached_diff.index("@@"):] == object_diff[object_diff.index("@@"):],
             "working_changes_remain_detectable": b"shared.py" in
                 fixture.git("diff-files", "--name-only"),
+            "preserved_staging_risk_is_reported":
+                any(w.get("code") == "preserved_staging_differs"
+                    for w in receipt.get("warnings", []))
+                and any(row.get("path") == "shared.py"
+                        and row.get("candidate_entry", {}).get("oid") ==
+                            fixture.git("rev-parse", "HEAD:shared.py").decode().strip()
+                        and row.get("preserved_index_entry", {}).get("oid") ==
+                            fixture.git("rev-parse", ":shared.py").decode().strip()
+                        and row["candidate_entry"] != row["preserved_index_entry"]
+                        for row in receipt.get("staging_review", [])),
         }
         # Sequential rejection, not a claim to simulate concurrent processes.
         settled_metadata = fixture.metadata()
@@ -187,6 +223,7 @@ def demo(tool: Path = TOOL, *, compare: bool = False) -> dict:
                   "fixture_removed_on_exit": True}
         if compare:
             result["controls"] = compare_git(root / "controls")
+            result["follow_on_control"] = follow_on_commit(root / "follow-on", tool)
     # Only return success after TemporaryDirectory cleanup completes.
     return result
 
@@ -220,6 +257,12 @@ def render_human(result: dict) -> str:
                          + str(row["foreign_staged_file_excluded"]).lower())
         lines += ["Native private-index Git also selects A and preserves B. Git supplies the mechanism.",
                   "That positive control does not implement the runtime's locking and recovery contract."]
+        follow_on = result["follow_on_control"]
+        lines += ["", "Observed next ordinary commit (separate disposable fixture):",
+                  "Before: " + compact(follow_on["before_ordinary_commit"]["head"]),
+                  "After:  " + compact(follow_on["after_ordinary_commit"]["head"]),
+                  "The ordinary commit actually reverted A while recording B; working bytes stayed unchanged.",
+                  "This demonstrates the handoff hazard. It does not reconcile another writer's staging."]
     lines += ["", "Verified commit: " + result["commit"],
               "Fixtures removed. Hooks were disabled in the fixture. No agent session was tested."]
     return "\n".join(lines)

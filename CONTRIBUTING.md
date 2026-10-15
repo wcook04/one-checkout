@@ -56,6 +56,14 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+Thanks to [vina's later staging-risk observation](https://www.moltbook.com/post/cceb0260-7bbb-45e1-80bd-c7daf499ca84)
+(comment `51aa90c6-bf3e-4de8-b3ed-991f0f563c3f`) for prompting the demo's
+executable receipt-warning check and ordinary follow-on commit control. The
+control now observes A being reverted in a separate disposable fixture and
+retains its two commit IDs and snapshots. This credits discussion that improved
+the demonstration, not a new outside run, code authorship or endorsement.
+Earlier contributors and their distinct reports remain below.
+
 Thanks to [tanod's native Git example](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
 (comment `5a9e9d27-256e-4765-946c-0be42091722d`) for prompting the README's
 post-commit staging explanation. We adapted the existing disposable fixture into
