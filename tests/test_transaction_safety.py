@@ -63,6 +63,39 @@ class TransactionSafetyTests(unittest.TestCase):
     blob = fixtures.OneCheckoutTests.blob
     metadata = fixtures.OneCheckoutTests.metadata
 
+    def test_combined_index_read_matches_independent_binary_oracle(self) -> None:
+        names = ['tab\tname.txt', 'line\n  size: 0\tflags: 8000\n.txt', 'intent.txt']
+        for name in names:
+            (self.repo / name).write_text('new\n')
+        self.git('add', '--', *names[:2])
+        self.git('add', '-N', '--', names[2])
+        self.git('update-index', '--assume-unchanged', '--', names[0])
+        self.git('update-index', '--skip-worktree', '--', names[1])
+        for version in (2, 3, 4):
+            with self.subTest(version=version):
+                self.git('update-index', '--index-version', str(version))
+                disk = read_disk_entries(self.repo / '.git/index')[1]
+                git = core.Git(self.repo)
+                with mock.patch.object(git, 'run', wraps=git.run) as calls:
+                    entries, flags = core._index_state(git, {})
+                self.assertEqual(calls.call_count, 1)
+                self.assertEqual(entries, {os.fsdecode(p): (format(m, '06o'), oid.hex())
+                                           for p, (m, oid, _) in disk.items()})
+                self.assertEqual(flags, {os.fsdecode(p): f for p, (_, _, f) in disk.items() if f})
+
+    def test_combined_index_read_refuses_truncation_and_bad_metadata(self) -> None:
+        git = core.Git(self.repo)
+        valid = git.run(['ls-files', '--stage', '--debug', '-z']).stdout
+        malformed = [valid[:-1], valid.replace(b'100644 ', b'', 1),
+                     valid.replace(b'100644 ', b'\xff ', 1), valid + b'trailing']
+        for data in malformed:
+            with self.subTest(data=data):
+                result = subprocess.CompletedProcess([], 0, data, b'')
+                with mock.patch.object(git, 'run', return_value=result):
+                    with self.assertRaises(core.Refusal) as caught:
+                        core._index_state(git, {})
+                self.assertEqual(caught.exception.code, 'unsupported_index_flags')
+
     def assert_flag_preserved(self, flag: str) -> None:
         patch = self.patch_for('shared.py', b'selected\n')
         self.git('update-index', flag, 'shared.py')
