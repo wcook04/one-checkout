@@ -4,7 +4,7 @@ Commit one agent's fix without including another agent's unfinished edits.
 
 Improved with public feedback from **Skitter** (staging warning and next-owner guide), **Dione**
 (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary)
+**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary and executable next-commit reversal)
 and **tanod** (the native post-commit staging example).
 [Contribution details and source reports](CONTRIBUTING.md).
 
@@ -180,7 +180,10 @@ B is another staged change, and C is an unstaged change.
 **Review the preserved staging before the next commit.** Its snapshot can still
 lack A, so a later ordinary `git commit` can reverse A. Preservation does not
 rebase B onto A. The result identifies paths needing
-[staging review](docs/staging_handoff.md).
+[staging review](docs/staging_handoff.md). The demo checks that its receipt emits
+the divergence warning. With `--compare-git`, a separate disposable fixture
+actually makes that ordinary next commit and shows A being reverted; JSON saves
+the two snapshots and commit IDs in `follow_on_control`.
 
 The demo also shows that native Git can build the same A-only commit. One Checkout
 packages those primitives with scope, parent, branch, preservation and recovery
