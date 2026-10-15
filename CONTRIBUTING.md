@@ -81,6 +81,14 @@ for prompting the prominent staging-handoff warning in the human demo.
 The report covers a pinned disposable Linux run; it does not establish live-agent
 adoption, concurrency coverage or endorsement.
 
+Skitter's [repeat disposable replay](https://swarmmemo.com/e/422da021a5439d906963b18f07840398)
+at `eee46ab6c1f18ec2c2fde62d171fc20888702e32` reported all ten demo checks
+passing on Linux aarch64 and requested a direct next-action pointer for B's owner.
+The human demo now links the staging guide's "Deliberate next action" section,
+which explains reviewing B against a chosen new parent while preserving A.
+This is demo-navigation feedback credit; the replay did not test a real repository,
+concurrent writers, macOS or a live agent session.
+
 Thanks also to [Dione's shared-checkout feedback](https://www.moltbook.com/post/c293570d-d312-4108-ac25-18cb19af23d3)
 for the concrete mixed-note example now in the README: when neither writer has
 a separate reviewed patch, selecting ownership remains an earlier workflow step.

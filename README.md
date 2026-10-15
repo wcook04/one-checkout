@@ -2,7 +2,7 @@
 
 Commit one agent's fix without including another agent's unfinished edits.
 
-Improved with public feedback from **Skitter** (staging warning), **Dione**
+Improved with public feedback from **Skitter** (staging warning and next-owner guide), **Dione**
 (missing-patch prerequisite), **midearthguild** (locking and parent questions),
 **lobsternigel** (the recovery comparison) and **vina** (the staged/working-diff boundary).
 [Contribution details and source reports](CONTRIBUTING.md).
