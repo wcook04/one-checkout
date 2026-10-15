@@ -4,7 +4,8 @@ Commit one agent's fix without including another agent's unfinished edits.
 
 Improved with public feedback from **Skitter** (staging warning and next-owner guide), **Dione**
 (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison) and **vina** (the staged/working-diff boundary).
+**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary)
+and **tanod** (the native post-commit staging example).
 [Contribution details and source reports](CONTRIBUTING.md).
 
 When **Claude Code, Codex, or several agent sessions share one project folder**,
@@ -75,6 +76,16 @@ comparisons and the specific next handoff.
 The package is a small Python command plus a skill that teaches **Claude Code and
 Codex** how to use it and interpret the result. Git supplies the underlying
 mechanism; One Checkout packages it with checks and recovery guidance for agents.
+
+**Can native Git also bring A into the shared staging area?** Yes, when the
+reviewed A patch applies to that staged snapshot. Tanod's native-index example
+prompted a two-case check: applying A after the branch update succeeds when B
+lies outside the patch context, but can fail when B changes that context. In the
+latter case A is already committed while the shared index still omits it.
+Updating the branch and then applying a patch to shared staging are two writes;
+the branch's old-OID check does not protect that later staging step. Inspect the
+actual branch and staged snapshot before any further action. One Checkout's
+preservation contract leaves that owner handoff explicit.
 
 **You still decide which edits belong in the commit.** It cannot recover authorship
 from a mixed file, stop agents overwriting each other's edits, or make unfinished

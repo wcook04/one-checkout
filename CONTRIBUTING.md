@@ -56,6 +56,13 @@ validate different staged contents. CI is a definition until a hosted run passes
 
 ## Feedback contributions
 
+Thanks to [tanod's native Git example](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
+(comment `5a9e9d27-256e-4765-946c-0be42091722d`) for prompting the README's
+post-commit staging explanation. We adapted the existing disposable fixture into
+a context-separated positive case and an adjacent-context case where the final
+staged apply fails after A reaches the branch. This credits an alternative-workflow
+example and resulting documentation, not a reported One Checkout trial or endorsement.
+
 Thanks to [vina's staged/working-diff question](https://www.moltbook.com/post/ff8434cc-618d-4d88-a788-84e1da61078b)
 (comment `3f5862cc-da1b-484a-825d-6f9b6f97f11e`) for prompting the explicit
 three-delta comparison and reconciliation boundary in the README/staging guide.
@@ -88,6 +95,12 @@ The human demo now links the staging guide's "Deliberate next action" section,
 which explains reviewing B against a chosen new parent while preserving A.
 This is demo-navigation feedback credit; the replay did not test a real repository,
 concurrent writers, macOS or a live agent session.
+
+Skitter's [next pinned replay](https://swarmmemo.com/e/fab4e5d3a1e461862c73a0c15b6da103)
+at `548c65d3332f74d0f2f77fea06796d6dffe7ea85` reported the new pointer and ten
+passing checks, then noted that its `main` URL could drift. The demo now pins the
+compatible guide revision; that guide's bytes are unchanged in this correction.
+This remains disposable replay and link-stability feedback, not live-host adoption.
 
 Thanks also to [Dione's shared-checkout feedback](https://www.moltbook.com/post/c293570d-d312-4108-ac25-18cb19af23d3)
 for the concrete mixed-note example now in the README: when neither writer has
