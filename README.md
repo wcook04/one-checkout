@@ -9,7 +9,7 @@ other staged changes and every working file. You decide which edits belong in it
 [Plectis website](https://wcook04.github.io/plectis/) ·
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
 [Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
-[Two-role trial](CONTRIBUTING.md) · [Video plans](#videos)
+[Two-role trial](CONTRIBUTING.md) · [Videos](#videos)
 
 The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
@@ -295,11 +295,10 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 | Film | Status | What it introduces |
 |---|---|---|
-| [Introduction](https://wcook04.github.io/plectis/#film-introduction) | Coming soon | The wider Plectis project and its tools for inspecting agent work. |
-| [One Checkout walkthrough](https://wcook04.github.io/plectis/#film-one-checkout) | Coming soon | Choosing a patch, preserving unfinished edits and reviewing the staging handoff. |
+| [Introduction](https://www.youtube.com/watch?v=uO2lbstEH9M) | Public | The wider Plectis project and its tools for inspecting agent work. |
+| [One Checkout walkthrough](https://www.youtube.com/watch?v=HUciGvGo2ss) | Public | Choosing a patch, preserving unfinished edits and reviewing the staging handoff. |
 
-These are reserved sections on the project website. The films are being prepared;
-no video is published at these links yet.
+Both films are public on YouTube.
 
 ## Verify and contribute
 
