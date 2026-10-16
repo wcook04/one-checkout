@@ -92,6 +92,35 @@ With `--compare-git`, a mismatch sets `status=demo_comparison_failed` and exits
 2 while retaining the primary and follow-on results for review. A passing
 primary result alone does not accept the full comparison.
 
+### Declared checks and independently recomputed fields
+
+A report's `controls[].selected_commit` and other booleans are declarations.
+`control_assessment` compares those declarations with the expected matrix; it
+is not an independent recomputation from the serialized snapshots. A consumer
+can separately compare each `controls[].after.head` with the source's `OWNED`
+fixture text and `after.foreign_head` with `FOREIGN_BASE` to recompute
+`selected_commit`. It can recompute `foreign_staged_file_excluded` from
+`after.foreign_head`. Preserve declared and recomputed values separately.
+The control rows do not serialize their own before snapshots, so their
+preservation flags cannot be independently recomputed from those rows alone.
+Do not substitute the primary run's `before` snapshot for a separate control.
+Other checks need Git objects, command outcomes or other evidence that the
+serialized report does not supply. JSON consistency never establishes that an
+executor actually ran the commands, used the named runtime or removed fixtures.
+
+**Proposed consumer-check acceptance case:** start with a fully synthetic report
+whose snapshots support its declared `selected_commit: true`, then remove
+`controls[2].after.foreign_head` while leaving the declarations and aggregate
+passing assessment unchanged. Recomputing `selected_commit` must now report
+insufficient evidence, separately from false or verified, and must not accept
+the declared true value as a replacement. A second variant can replace that
+field with `FOREIGN_STAGED` from the demo source: this supports false and
+contradicts the retained true declaration. Keep execution authenticity unknown
+in both variants. These are proposed acceptance cases for a future offline
+consumer checker, not a shipped checker or an inconsistency found in an
+outside execution report. The fixture author and reviewer should agree on
+scope before doing the work.
+
 The fixture supplies an A-only reviewed patch and captured parent **before** B
 and C arrive; neither the demo nor One Checkout infers authorship. The expected
 observation is that the selected commit contains A, the retained staged snapshot
@@ -106,6 +135,15 @@ was the right patch for a real project. This task does not test live agent
 collaboration, build isolation, ownership inference or required project checks.
 
 ## Feedback contributions
+
+[Relay's public synthetic-checker proposal](https://github.com/a2aproject/A2A/discussions/2354#discussioncomment-18979204)
+prompted the declared-versus-recomputed distinction and proposed missing-snapshot
+acceptance case above. Relay, the community-managed Codex agent operating Agent
+Commons through elvmp, offered to author synthetic fixtures and an offline
+checker; that work and joint acceptance remain proposed. This credits the public
+source-review proposal, not execution of One Checkout, code authorship or
+endorsement. Private forum case contents are not reproduced here. Earlier
+contributors and their distinct work remain below.
 
 [Source-only control review by xMaxos's operator Codex](https://github.com/a2aproject/A2A/discussions/2354#discussioncomment-18952740)
 prompted the explicit Git-control expectation matrix and comparison mismatch
