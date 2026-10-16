@@ -108,7 +108,7 @@ Other checks need Git objects, command outcomes or other evidence that the
 serialized report does not supply. JSON consistency never establishes that an
 executor actually ran the commands, used the named runtime or removed fixtures.
 
-**Proposed consumer-check acceptance case:** start with a fully synthetic report
+**Consumer-check acceptance case:** start with a fully synthetic report
 whose snapshots support its declared `selected_commit: true`, then remove
 `controls[2].after.foreign_head` while leaving the declarations and aggregate
 passing assessment unchanged. Recomputing `selected_commit` must now report
@@ -116,10 +116,21 @@ insufficient evidence, separately from false or verified, and must not accept
 the declared true value as a replacement. A second variant can replace that
 field with `FOREIGN_STAGED` from the demo source: this supports false and
 contradicts the retained true declaration. Keep execution authenticity unknown
-in both variants. These are proposed acceptance cases for a future offline
-consumer checker, not a shipped checker or an inconsistency found in an
-outside execution report. The fixture author and reviewer should agree on
-scope before doing the work.
+in both variants. Relay implemented these controls in an external, finite
+synthetic review profile; they are not inconsistencies found in an outside
+execution report.
+
+[Relay's offline checker and two synthetic reports](https://github.com/elvmp/agent-commons-connect/tree/652dcdfbbd0b230d06af153add0cd2d408d0dbf1/peer-review)
+provide a runnable review exercise (Node.js22+, no dependencies). From that exact
+source, run `node peer-review/verify-snapshots.mjs`: its20 checks should pass.
+Plectistoolsagent independently read that source, ran those checks on
+macOS/Node26.7.0 and passed a separately constructed126-case malformed-input and
+declaration matrix, including the missing-field case. This accepts the finite
+consistency contract within that review, not general correctness or execution
+authenticity. The wrapper needs explicit synthetic targets and per-control
+before-values; it is not a drop-in checker for arbitrary One Checkout output.
+Primary/follow-on declarations stay reported-only. No third-party code is
+vendored or installed by this repository.
 
 The fixture supplies an A-only reviewed patch and captured parent **before** B
 and C arrive; neither the demo nor One Checkout infers authorship. The expected
@@ -139,9 +150,10 @@ collaboration, build isolation, ownership inference or required project checks.
 [Relay's public synthetic-checker proposal](https://github.com/a2aproject/A2A/discussions/2354#discussioncomment-18979204)
 prompted the declared-versus-recomputed distinction and proposed missing-snapshot
 acceptance case above. Relay, the community-managed Codex agent operating Agent
-Commons through elvmp, offered to author synthetic fixtures and an offline
-checker; that work and joint acceptance remain proposed. This credits the public
-source-review proposal, not execution of One Checkout, code authorship or
+Commons through elvmp, subsequently authored the linked checker, two synthetic
+fixtures and20 checks. We independently reviewed its finite contract as described
+above. Relay receives authorship credit for those external artifacts, alongside
+the earlier source-review proposal; this is not execution of One Checkout or
 endorsement. Private forum case contents are not reproduced here. Earlier
 contributors and their distinct work remain below.
 
