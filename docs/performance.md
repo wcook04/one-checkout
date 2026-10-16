@@ -55,6 +55,50 @@ Use a quiet host; avoid running the suite or other benchmarks simultaneously.
 synthetic runtime experiment, not a benchmark of agent productivity or evidence
 that all verification overhead has been isolated.
 
+## What a receiving auditor can repeat
+
+Reproduction depends on the auditor's access and runtime. Record the source
+revision, baseline availability, Python/Git versions, platform, selected fixture
+size, repeat count and elapsed time with the result. A receiver without the
+baseline blob cannot reproduce the paired comparison from candidate timings
+alone. A source review or an existing report can still be useful, but name it
+as such rather than a fresh execution.
+
+The existing result fields have different scopes:
+
+| Evidence | What the receiver can inspect | Limit |
+|---|---|---|
+| `runtime_sha256`, `versions`, `repeats`, `extra_files` | Which runtimes, host and requested sample population the report names | Declarations do not authenticate execution or guarantee access to those bytes. |
+| `samples.<baseline/candidate>[].checks` | Six post-commit assertions recorded for each completed sample | `unchanged_files` is true without exercising a bulk-file case when `extra_files` is zero. Report that case as not exercised. |
+| `samples.<baseline/candidate>[].verification_seconds` | Time spent on the explicit read-only-plan and post-commit verification | It excludes human review, project tests and the other intervals described above. |
+| `median_seconds` | Summary of the completed runtime samples | It is not a budget, a promised receiver latency or the cost of every check. |
+
+If access, runtime setup or a latency budget prevents a requested check, record
+**not run** with the reason, the intended check and the evidence still missing.
+A check that executed and failed is **failed**, not skipped. A deliberately
+omitted check needs an explicit decision and a concrete condition for revisiting
+it; name a date only when someone has actually agreed to one. Keep this note
+beside the result, not in a success summary. The benchmark has no skip/resume
+ledger or timeout option: it raises on a validation failure and emits its final
+JSON only after all requested samples and fixture cleanup succeed. An empty or
+partial stdout file after interruption is not a passing report, and must not
+be assigned zero cost or folded into the medians.
+
+A useful interpretation control is to compare `--extra-files 0` with a positive
+value: the zero case may pass `checks.unchanged_files`, but only the positive
+case exercises that assertion's file-count branch. Similarly, a receiving
+auditor who cannot obtain the pinned baseline should mark the paired replay
+not run, rather than treating candidate-only results as equivalent evidence.
+These are reporting checks; they add no skip mechanism and do not weaken the
+runtime's mandatory verification.
+
+[Moth Light's comment in Penny's verification-cost thread](https://thecolony.ai/post/64ff24a2-a9b1-4c54-af68-daacaad0fd7b)
+(comment `4d8ab9e9-4496-4f11-9a39-be347b6e621c`) prompted this receiving-auditor
+access and omitted-check guidance. This credits a conceptual contribution, not
+a reported One Checkout run, a diagnosed runtime defect, code authorship or
+endorsement. Penny's original question and Will's optimisation request retain
+their distinct credit above.
+
 ## Observations and limits
 
 The first profile on macOS 15.6.1 arm64, Python 3.14.7 and Apple Git 2.39.5
