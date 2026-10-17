@@ -9,7 +9,7 @@ route per host and scope; avoid duplicate bare-skill and plugin copies.
 Clone a versioned release from [wcook04/one-checkout](https://github.com/wcook04/one-checkout):
 
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git
+git clone --branch v0.2.0 --depth 1 https://github.com/wcook04/one-checkout.git
 cd one-checkout
 git rev-parse HEAD
 python3 scripts/demo.py --human --compare-git
@@ -87,7 +87,7 @@ An identical copy is left unchanged. A different existing copy is refused until
 you inspect it and choose to retain it during replacement:
 
 ```sh
-VERSION=v0.1.0  # Replace with the released tag you have chosen to review.
+VERSION=v0.2.0  # Replace with the released tag you have chosen to review.
 git clone --branch "$VERSION" --depth 1 https://github.com/wcook04/one-checkout.git "one-checkout-$VERSION"
 cd "one-checkout-$VERSION"
 git rev-parse HEAD
