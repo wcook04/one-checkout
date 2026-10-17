@@ -11,6 +11,25 @@ other staged changes and every working file. You decide which edits belong in it
 [Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
 [Two-role trial](CONTRIBUTING.md) · [Videos](#videos)
 
+## Can I use it today?
+
+- **Usable today:** a Python CLI and a self-contained skill for Claude Code and
+  Codex, on macOS or Linux with Python 3.10+ and Git 2.39+. Supply a reviewed
+  patch, exact paths and the full parent commit it was prepared against. Plan,
+  review the reported branch and candidate, run project checks, then authorise
+  the commit. The [demo below](#try-it-before-installing) is the first action.
+- **Tested:** disposable repositories exercise patch selection, retained staging,
+  unchanged working files, refusals and recovery. Installation rehearsals test
+  copied skills. These are technical checks and synthetic demonstrations;
+  [outside replay reports](CONTRIBUTING.md) remain distinct from independent
+  use on an actual project's change.
+- **Experimental or unverified:** live-agent skill discovery and use across
+  concurrent sessions. Independent project adoption is not established by these
+  tests or replay reports. Automatic edit ownership or selection is unsupported:
+  the caller must supply the reviewed patch. The
+  [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
+  from runtime correctness.
+
 The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
 to work with this repository.
@@ -94,8 +113,11 @@ folder that contains several people's or agents' unfinished changes.**
 
 You or your agent prepare a patch containing exactly the change you intend to
 commit. One Checkout applies it to the captured starting commit in a separate
-Git index, checks the allowed paths, and commits that candidate. If the branch
-has moved, it refuses so you can review the new situation.
+Git index, checks the allowed paths, and prepares that candidate. After you
+review the plan, an authorised commit uses Git's native ref transaction to
+publish it on the named branch against the expected parent, then settles the
+shared staging area and returns a JSON receipt. If the parent or reviewed branch
+has changed, it refuses so you can review the new situation.
 
 The working files keep all their edits. Other people's staged snapshots stay
 staged. **Review the staging handoff:** a preserved snapshot can lack the fix you
@@ -112,6 +134,9 @@ It cannot infer authorship from a mixed file, stop writers overwriting each
 other, or make unfinished code correct. If nobody retained a separate patch,
 prepare and review one without removing other edits from the shared files; see
 [patch selection](skills/one-checkout/references/patch-selection.md).
+A plan does not reserve the checkout or decide which branch you intended.
+Review that branch explicitly. The tool does not reconcile retained staging
+onto the new commit or isolate editing, builds or running processes.
 For independent editing environments, use Git worktrees. For a single owner's
 ordinary commit, normal Git is usually simpler. See
 [choosing a workflow](docs/choosing_a_workflow.md).
@@ -121,9 +146,12 @@ ordinary commit, normal Git is usually simpler. See
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
-The demo above follows current `main`. Install the tagged `v0.1.0` release
-from a separate clone. If you just ran the demo, use `cd ..` first to return to
-its parent directory; the two source folders can then sit beside each other:
+The demo above follows current `main`. The tagged `v0.1.0` release pins
+[commit `d0ebf921`](https://github.com/wcook04/one-checkout/commit/d0ebf921582b1992a948b12346dd9d58e64b14f3),
+which differs from current `main`; later examples and checks need not be present
+in that release. Install it from a separate clone. If you just ran the demo,
+use `cd ..` first to return to its parent directory; the two source folders can
+then sit beside each other:
 
 ```sh
 git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.1.0

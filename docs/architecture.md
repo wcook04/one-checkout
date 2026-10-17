@@ -1,9 +1,40 @@
 # Runtime architecture and outcome boundaries
 
-This is a single-purpose Git command, not a scheduler, worktree manager or
-replacement transaction engine. All runtime code remains in
-`skills/one-checkout/scripts/one_checkout.py`; the installer copies the explicit `bundle.json` payload, including guidance,
-demo and doctor, as one self-contained skill.
+One Checkout turns a caller-selected, reviewed patch into one commit while
+preserving unrelated staged snapshots and all working files. Its caller is a
+person or agent that already knows the intended repository, named branch,
+exact paths and captured parent. It does not infer which edits belong to that
+caller. The [README](../README.md#try-it-before-installing) demonstrates A's
+reviewed fix alongside B's staged work and C's unstaged edits in one file.
+
+The workflow is: validate the supplied patch against the captured parent in a
+private Git index; return a plan for review; on an authorised commit, recheck
+live state, publish through Git's native ref transaction, settle the shared
+index and return the outcome receipt. The plan binds the reviewed branch but
+reserves no state. The first branch choice still belongs to the caller.
+
+## Runtime and distribution
+
+All transaction runtime code remains in
+[`skills/one-checkout/scripts/one_checkout.py`](../skills/one-checkout/scripts/one_checkout.py).
+There is no second root-level transaction implementation. The source command
+`python3 scripts/demo.py --human --compare-git` is a small `runpy` wrapper over
+the bundled `skills/one-checkout/scripts/demo.py`.
+
+[`scripts/install.py`](../scripts/install.py) validates the explicit
+[`bundle.json`](../skills/one-checkout/bundle.json) inventory and copies the
+skill, licence, runtime, demo, doctor and two reference guides as one
+self-contained directory. The installed copy works after its source checkout
+is removed. Repository documentation, evaluation tools and that source wrapper
+are not installed. Installation supplies files; host permissions and actual
+skill discovery are separate requirements.
+
+The tagged `v0.1.0` release and current `main` are different source revisions.
+Use the [release record](https://github.com/wcook04/one-checkout/releases/tag/v0.1.0)
+for that version's exact checks. Regression counts, installation rehearsals and
+outside synthetic replays do not establish independent project adoption or
+live-agent reliability; see [release checks](release_checks.md) and
+[agent evaluation](agent_evaluation.md).
 
 ## Responsibilities and resource owners
 
@@ -90,7 +121,10 @@ Ref publication and shared-index replacement are separate operations. Another
 observer can see the new ref before settlement. Do not claim atomic visibility
 of ref plus index, or roll back a published ref after another actor may depend
 on it. The worktree is neither locked nor written. Use isolated worktrees when
-agents need incompatible filesystem or runtime states.
+agents need incompatible filesystem or runtime states. The selected patch
+controls the commit's content; editing and builds still use shared files.
+Authorship inference and automatic reconciliation of retained staging onto the
+new commit remain outside the command.
 
 ## CLI outcome contract
 
