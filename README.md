@@ -146,16 +146,16 @@ ordinary commit, normal Git is usually simpler. See
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
-The demo above follows current `main`. The tagged `v0.1.0` release pins
-[commit `d0ebf921`](https://github.com/wcook04/one-checkout/commit/d0ebf921582b1992a948b12346dd9d58e64b14f3),
-which differs from current `main`; later examples and checks need not be present
-in that release. Install it from a separate clone. If you just ran the demo,
+The demo above follows current `main`. The tagged `v0.2.0` release includes
+this demo; later commits on `main` may differ, and the
+[release record](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0)
+names the exact tested commit. Install it from a separate clone. If you just ran the demo,
 use `cd ..` first to return to its parent directory; the two source folders can
 then sit beside each other:
 
 ```sh
-git clone --branch v0.1.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.1.0
-cd one-checkout-v0.1.0
+git clone --branch v0.2.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.2.0
+cd one-checkout-v0.2.0
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
@@ -330,7 +330,7 @@ Both films are public on YouTube.
 
 ## Verify and contribute
 
-The [release](https://github.com/wcook04/one-checkout/releases/tag/v0.1.0) links its
+The [release](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0) links its
 exact tested commit and results. [CI](.github/workflows/ci.yml) exercises Linux and
 macOS, installation, native Git backends and these local checks:
 
