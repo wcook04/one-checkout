@@ -39,8 +39,10 @@ BRANCH_POLICY_HOOK = """#!/bin/sh
 printf '%s\\n' called >> "$(dirname "$0")/calls"
 local_dir=$(git rev-parse --absolute-git-dir) || exit 1
 common_dir=$(git rev-parse --path-format=absolute --git-common-dir) || exit 1
+branch=$(git symbolic-ref -q HEAD) || exit 1
+case "$branch" in refs/heads/*) ;; *) exit 1 ;; esac
 [ "$local_dir" != "$common_dir" ] && exit 0
-[ "$(git symbolic-ref -q HEAD)" = refs/heads/main ]
+[ "$branch" = refs/heads/main ]
 """
 
 
@@ -257,7 +259,7 @@ def _policy_snapshot(f: Fixture) -> dict[str, Any]:
     # Linked worktrees have a .git file and their own index in the common repo.
     index = Path(f.git("rev-parse", "--path-format=absolute", "--git-path", "index").stdout.decode().strip())
     return {"head": f.git("rev-parse", "HEAD").stdout.decode().strip(),
-            "branch": f.git("symbolic-ref", "HEAD").stdout.decode().strip(),
+            "branch": f.git("symbolic-ref", "--quiet", "HEAD", check=False).stdout.decode().strip() or "HEAD",
             "refs": dict(line.split(" ", 1) for line in f.git(
                 "for-each-ref", "--format=%(refname) %(objectname)").stdout.decode().splitlines()),
             "index_sha256": hashlib.sha256(index.read_bytes()).hexdigest(),
@@ -271,9 +273,11 @@ def project_branch_admission(f: Fixture, plan: dict[str, Any]) -> dict[str, Any]
     local = Path(f.git("rev-parse", "--absolute-git-dir").stdout.decode().strip()).resolve(strict=True)
     common = Path(f.git("rev-parse", "--path-format=absolute", "--git-common-dir").stdout.decode().strip()).resolve(strict=True)
     repository_matches = Path(plan["repository"]).resolve() == f.repo.resolve()
-    allowed = repository_matches and (local != common or plan["branch"] == "refs/heads/main")
+    branch = plan.get("branch")
+    named = isinstance(branch, str) and branch.startswith("refs/heads/") and plan.get("head_mode", "attached") == "attached"
+    allowed = repository_matches and named and (local != common or branch == "refs/heads/main")
     return {"allowed": allowed, "primary_checkout": local == common,
-            "repository_matches": repository_matches, "reviewed_branch": plan["branch"],
+            "repository_matches": repository_matches, "named_branch_admitted": named, "reviewed_branch": branch,
             "reason": "allowed" if allowed else "project_branch_policy"}
 
 
@@ -282,9 +286,12 @@ def branch_policy_control(f: Fixture, mode: str, topology: str, *, switch_branch
         raise ValueError(mode)
     if topology == "primary_feature":
         f.git("switch", "-q", "-c", "feature")
-    elif topology == "linked_feature":
+    elif topology == "primary_detached":
+        f.git("checkout", "--detach", "-q", f.parent)
+    elif topology in ("linked_feature", "linked_detached"):
         linked = f.root / "linked"
-        f.git("worktree", "add", "-q", "-b", "feature", str(linked), f.parent)
+        target = ["--detach"] if topology == "linked_detached" else ["-b", "feature"]
+        f.git("worktree", "add", "-q", *target, str(linked), f.parent)
         f.repo = linked
         (linked / "shared.py").write_bytes(STAGED)
         (linked / "foreign.txt").write_bytes(b"foreign staged\n")
@@ -331,7 +338,8 @@ def branch_policy_control(f: Fixture, mode: str, topology: str, *, switch_branch
     after = _policy_snapshot(f)
     hook_calls = (hooks / "calls").read_text().splitlines() if (hooks / "calls").exists() else []
     committed = operation is not None and operation.returncode == 0
-    expected_commit = not switch_branch and (topology != "primary_feature" or mode == "one_checkout_without_admission")
+    expected_commit = not switch_branch and (topology in ("primary_main", "linked_feature")
+                                             or mode == "one_checkout_without_admission")
     checks.update({"outcome_matches_policy_control": committed == expected_commit,
                    "ordinary_hook_execution_matches_arm": len(hook_calls) == (1 if mode == "native_hook" else 0),
                    "index_entries_preserved": after["index_entries"] == before["index_entries"],
@@ -342,7 +350,8 @@ def branch_policy_control(f: Fixture, mode: str, topology: str, *, switch_branch
                        "expected_commit_contents": f.blob("HEAD") == (STAGED if mode == "native_hook" else OWNED),
                        "expected_foreign_contents": f.blob("HEAD", "foreign.txt") == (
                            b"foreign staged\n" if mode == "native_hook" else b"foreign base\n"),
-                       "only_target_ref_advanced": after["refs"] == {**before["refs"], target: after["head"]},
+                       "only_target_ref_advanced": after["refs"] == (before["refs"] if target == "HEAD"
+                                                                    else {**before["refs"], target: after["head"]}),
                        "branch_unchanged": after["branch"] == target})
     else:
         # An ordinary refused commit may refresh index stat data. Its entries
@@ -391,7 +400,8 @@ def comparison(tool: Path = TOOL, *, repeats: int = 3, seed: int = 7132026) -> d
                   candidate_dependency(Fixture(root / "dependency", tool))]
         policy_controls = [branch_policy_control(Fixture(root / f"policy-{mode}-{topology}", tool), mode, topology)
                            for mode in ("native_hook", "one_checkout_without_admission", "project_admission")
-                           for topology in ("primary_main", "primary_feature", "linked_feature")]
+                           for topology in ("primary_main", "primary_feature", "linked_feature",
+                                            "primary_detached", "linked_detached")]
         policy_controls.extend(branch_policy_control(Fixture(root / f"policy-switch-{topology}", tool),
                                                      "project_admission", topology, switch_branch=True)
                                for topology in ("primary_main", "linked_feature"))

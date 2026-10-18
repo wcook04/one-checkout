@@ -16,8 +16,8 @@ other staged changes and every working file. You decide which edits belong in it
 - **Usable today:** a Python CLI and a self-contained skill for Claude Code and
   Codex, on macOS or Linux with Python 3.10+ and Git 2.39+. Supply a reviewed
   patch, exact paths and the full parent commit it was prepared against. Plan,
-  review the reported branch and candidate, run project checks, then authorise
-  the commit. The [demo below](#try-it-before-installing) is the first action.
+  review the reported branch or detached HEAD and candidate, run project checks,
+  then authorise the commit. The [demo below](#try-it-before-installing) is the first action.
 - **Tested:** disposable repositories exercise patch selection, retained staging,
   unchanged working files, refusals and recovery. Installation rehearsals test
   copied skills. These are technical checks and synthetic demonstrations;
@@ -115,9 +115,10 @@ You or your agent prepare a patch containing exactly the change you intend to
 commit. One Checkout applies it to the captured starting commit in a separate
 Git index, checks the allowed paths, and prepares that candidate. After you
 review the plan, an authorised commit uses Git's native ref transaction to
-publish it on the named branch against the expected parent, then settles the
-shared staging area and returns a JSON receipt. If the parent or reviewed branch
-has changed, it refuses so you can review the new situation.
+publish it on the reviewed branch or detached HEAD against the expected parent,
+then settles the shared staging area and returns a JSON receipt. If the parent
+or reviewed HEAD identity has changed, it refuses so you can review the new
+situation.
 
 The working files keep all their edits. Other people's staged snapshots stay
 staged. **Review the staging handoff:** a preserved snapshot can lack the fix you
@@ -134,9 +135,12 @@ It cannot infer authorship from a mixed file, stop writers overwriting each
 other, or make unfinished code correct. If nobody retained a separate patch,
 prepare and review one without removing other edits from the shared files; see
 [patch selection](skills/one-checkout/references/patch-selection.md).
-A plan does not reserve the checkout or decide which branch you intended.
-Review that branch explicitly. The tool does not reconcile retained staging
-onto the new commit or isolate editing, builds or running processes.
+A plan does not reserve the checkout or decide which commit target you intended.
+Review the named branch or detached HEAD explicitly. Detached commits move only
+that worktree's HEAD, without creating or advancing a named branch. The caller
+still owns keeping that commit reachable or handing it back to a pipeline. The
+tool does not reconcile retained staging onto the new commit or isolate editing,
+builds or running processes.
 For independent editing environments, use Git worktrees. For a single owner's
 ordinary commit, normal Git is usually simpler. See
 [choosing a workflow](docs/choosing_a_workflow.md).
@@ -152,10 +156,16 @@ bypass control; it does not enable arbitrary hooks or validate candidate code.
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
-The demo above follows current `main`. The tagged `v0.2.0` release includes
-this demo; later commits on `main` may differ, and the
+The demo above follows current `main`, including detached HEAD support. To
+install that source version, record `git rev-parse HEAD` in the demo clone and
+run `python3 scripts/install.py --agent both --dry-run`, then the same command
+without `--dry-run` after reviewing the destination.
+
+The tagged `v0.2.0` release supports **named branches only**. It includes the
+original demo, but not detached HEAD support. Its
 [release record](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0)
-names the exact tested commit. Install it from a separate clone. If you just ran the demo,
+names the exact tested commit. To install that release, use a separate clone.
+If you just ran the demo,
 use `cd ..` first to return to its parent directory; the two source folders can
 then sit beside each other:
 
@@ -294,11 +304,13 @@ inspects it without changing Git state. See the
 exclusively and tracks its inode. It refuses an existing lock and never removes
 a replacement writer's lock. The selected patch is applied through a separate
 private index. Git's native prepared `update-ref` transaction protects HEAD and
-the resolved branch during publication. A plan does not reserve locks or state.
+its resolved branch, when attached, during publication. A plan does not reserve
+locks or state. A same-parent switch between detached and attached HEAD is also
+refused; matching commit IDs alone do not identify the target.
 
 **Where does the expected parent come from?** The caller supplies a full commit
 ID with `--expected-parent`; it is not taken from a patch header. The commit
-checks live HEAD against that captured parent, rechecks branch identity and the
+checks live HEAD against that captured parent, rechecks HEAD identity and the
 index while preparing, and uses Git's ref transaction to publish only against
 the expected parent. If the checkout has moved, review the patch again rather
 than substitute a new parent merely to make it pass.
@@ -317,10 +329,11 @@ or unsettled result before retrying. See [transaction safety](docs/transaction_s
 - **Staging is preserved selectively.** Selected entries that are unchanged from
   the parent and have no semantic flags advance to the candidate. Foreign or flagged
   staged entries retain their snapshot; unrelated entries are preserved.
-- **Use trusted repositories and cooperating writers.** Named branches and full
-  indexes are required. Split, sparse, unmerged and partial/promisor repositories
-  are refused. Branch publication and shared-index replacement are separate steps;
-  crashes, hostile writers and storage failures are not made atomic.
+- **Use trusted repositories and cooperating writers.** An existing commit and a full
+  index are required; named branches and detached HEAD are supported. Split, sparse,
+  unmerged and partial/promisor repositories are refused. Ref publication and
+  shared-index replacement are separate steps; crashes, hostile writers and
+  storage failures are not made atomic.
 
 Read [transaction safety](docs/transaction_safety.md) and
 [security reporting](SECURITY.md) for the full boundary.

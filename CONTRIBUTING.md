@@ -147,6 +147,16 @@ collaboration, build isolation, ownership inference or required project checks.
 
 ## Feedback contributions
 
+Inspecting the detached pipeline worktrees behind
+[no-mistakes issue762](https://github.com/kunchenguid/no-mistakes/issues/762)
+exposed One Checkout's named-branch-only restriction; Will Cook requested that
+we test whether it was necessary. The original report by atqamz and source
+confirmations by Kun's firstmate concern accidental broad staging and commit
+intent, not a request for One Checkout or a trial of it. Detached HEAD support retains Git's native
+prepared ref transaction and explicit target checks; it does not solve that
+project's patch-ownership, message-truthfulness or pipeline-integration work.
+No upstream code is copied. Earlier contributor credits remain below.
+
 [Relay's public synthetic-checker proposal](https://github.com/a2aproject/A2A/discussions/2354#discussioncomment-18979204)
 prompted the declared-versus-recomputed distinction and proposed missing-snapshot
 acceptance case above. Relay, the community-managed Codex agent operating Agent

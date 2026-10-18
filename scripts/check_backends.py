@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Real-Git ref/object/storage matrix in disposable fixtures, never a live repo.
 
-P01's 30-case matrix, made portable for Git versions without --ref-format.
+Named and detached HEAD cases, portable to Git versions without --ref-format.
 Shares independent raw Git/blob/working-state oracles with stress.py. Runtime
 imports and mock barriers are test-only; each competitor is a native Git command.
 """
@@ -34,7 +34,9 @@ def configurations():
             for state in ("ordinary", "packed", "linked"):
                 if backend == "reftable" and state == "packed":
                     continue  # Packed loose refs belong to the files backend.
-                for case in ("same_file", "switch_before_prepare", "switch_while_prepared"):
+                for case in ("same_file", "switch_before_prepare", "switch_while_prepared",
+                             "detached_same_file", "detached_attach_before_prepare",
+                             "detached_attach_while_prepared"):
                     yield backend, objects, state, case
 
 
@@ -90,6 +92,15 @@ def backend_case(root: Path, tool: Path, backend: str, objects: str, state: str,
     g("branch", "other", parent)
     if state == "packed":
         g("pack-refs", "--all", "--prune")
+    detached = case.startswith("detached_")
+    if detached:
+        g("checkout", "--detach", "-q", parent)
+    named_refs_before = g("for-each-ref", "--format=%(refname) %(objectname)").stdout
+    main_head_before = stress.git(main, env, "rev-parse", "HEAD", timeout=timeout).stdout
+    main_identity_before = stress.git(main, env, "symbolic-ref", "--quiet", "HEAD", check=False, timeout=timeout)
+    main_index = Path(os.fsdecode(stress.git(main, env, "rev-parse", "--path-format=absolute",
+                                           "--git-path", "index", timeout=timeout).stdout).strip())
+    main_index_before, main_working_before = main_index.read_bytes(), stress.working_model(main)
     selected = base.replace(b"line 01\n", b"A selected\n")
     (repo / "shared.txt").write_bytes(selected)
     patch = g("diff", "--binary", "--no-ext-diff", "--no-textconv", parent, "--", "shared.txt").stdout
@@ -113,7 +124,7 @@ def backend_case(root: Path, tool: Path, backend: str, objects: str, state: str,
             options = {"git_timeout": timeout} if "git_timeout" in inspect.signature(core.commit_patch).parameters else {}
             return core.commit_patch(repo=repo, patch=patch, paths=["shared.txt"],
                                      expected_parent=parent, message="Synthetic A only", **options)
-        if case == "switch_before_prepare":
+        if case in ("switch_before_prepare", "detached_attach_before_prepare"):
             command = core.Git.command
             switched = []
             def switch(self, args):
@@ -127,14 +138,14 @@ def backend_case(root: Path, tool: Path, backend: str, objects: str, state: str,
                 except core.Refusal as error:
                     extras["refusal_code"] = error.code
                 else:
-                    raise AssertionError("same-OID branch switch was not refused")
+                    raise AssertionError("same-OID HEAD identity switch was not refused")
             checks = {"branch_identity_refusal": extras["refusal_code"] == "head_race",
                       "both_same_oid_branches_unchanged": text("rev-parse", branch) == parent
                       and text("rev-parse", "refs/heads/other") == parent,
                       "competing_branch_is_current": text("symbolic-ref", "HEAD") == "refs/heads/other"}
             expected_tree = {"shared.txt": ("100644", base)}
         else:
-            if case == "switch_while_prepared":
+            if case in ("switch_while_prepared", "detached_attach_while_prepared"):
                 verifier = core._verify_prepared_head
                 def competing(git, br, pa, *args, **kwargs):
                     result = g("symbolic-ref", "HEAD", "refs/heads/other", check=False)
@@ -147,8 +158,11 @@ def backend_case(root: Path, tool: Path, backend: str, objects: str, state: str,
             checks = {"committed_receipt": receipt["status"] == "committed",
                       "receipt_names_head": receipt["new_commit"] == text("rev-parse", "HEAD"),
                       "exact_parent": text("rev-parse", "HEAD^") == parent,
-                      "exact_branch_identity": text("symbolic-ref", "HEAD") == branch}
-            if case == "switch_while_prepared":
+                      "exact_branch_identity": (g("symbolic-ref", "--quiet", "HEAD", check=False).returncode == 1
+                                                if detached else text("symbolic-ref", "HEAD") == branch)}
+            if detached:
+                checks["receipt_explicit_detached_target"] = receipt["branch"] == "HEAD" and receipt["head_mode"] == "detached"
+            if case in ("switch_while_prepared", "detached_attach_while_prepared"):
                 checks["native_preparation_blocks_competing_head_writer"] = extras["competing_symref_returncode"] != 0
             expected_tree = {"shared.txt": ("100644", selected)}
     raw_tree = g("ls-tree", "-r", "--full-tree", "-z", "HEAD").stdout
@@ -158,6 +172,15 @@ def backend_case(root: Path, tool: Path, backend: str, objects: str, state: str,
                   index_bytes_unchanged=index.read_bytes() == before_index,
                   working_bytes_and_modes_exact=stress.working_model(repo) == before_working,
                   no_remaining_index_lock=not index.with_name(index.name + ".lock").exists())
+    if detached:
+        checks["all_named_refs_unchanged"] = g("for-each-ref", "--format=%(refname) %(objectname)").stdout == named_refs_before
+        if state == "linked":
+            main_identity_after = stress.git(main, env, "symbolic-ref", "--quiet", "HEAD", check=False, timeout=timeout)
+            checks.update(primary_head_unchanged=stress.git(main, env, "rev-parse", "HEAD", timeout=timeout).stdout == main_head_before,
+                          primary_head_identity_unchanged=(main_identity_after.returncode, main_identity_after.stdout)
+                          == (main_identity_before.returncode, main_identity_before.stdout),
+                          primary_index_unchanged=main_index.read_bytes() == main_index_before,
+                          primary_working_bytes_unchanged=stress.working_model(main) == main_working_before)
     return {"case": case, "classification": "pass" if all(checks.values()) else "invariant_failure",
             "ref_backend": backend, "object_format": objects, "storage_state": state,
             "backend_initialization": spelling, "checks": checks, "parent": parent, "branch": branch,
@@ -183,7 +206,8 @@ def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="one-checkout-backends-", dir=args.scratch.resolve()))
     tool, content = stress.freeze_runtime(args.tool.resolve(), root)
     rows = []
-    for index, (backend, objects, state, case) in enumerate(configurations()):
+    requested = list(configurations())
+    for index, (backend, objects, state, case) in enumerate(requested):
         case_root = root / str(index)
         try:
             row = backend_case(case_root, tool, backend, objects, state, case, args.timeout)
@@ -194,7 +218,7 @@ def main() -> int:
             row = {"case": case, "classification": "harness_error", "ref_backend": backend,
                    "object_format": objects, "storage_state": state, "error": repr(error)}
         rows.append(row)
-        report = {"schema": "one_checkout_backend_matrix_v1", "complete": len(rows) == 30,
+        report = {"schema": "one_checkout_backend_matrix_v1", "complete": len(rows) == len(requested),
                   "classification": stress.summary_classification(rows), "runtime_source": str(args.tool.resolve()),
                   "runtime_sha256": stress.digest(content), "harness_sha256": HARNESS_SHA256,
                   "environment": {"git": subprocess.check_output(["git", "--version"], text=True).strip(),

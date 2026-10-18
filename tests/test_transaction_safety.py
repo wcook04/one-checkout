@@ -63,6 +63,76 @@ class TransactionSafetyTests(unittest.TestCase):
     blob = fixtures.OneCheckoutTests.blob
     metadata = fixtures.OneCheckoutTests.metadata
 
+    def test_same_oid_attach_or_detach_before_prepare_refuses(self):
+        patch = self.patch_for('shared.py', b'selected\n')
+        command = core.Git.command
+        for detached in (False, True):
+            with self.subTest(detached=detached):
+                if detached:
+                    self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+                else:
+                    self.git('symbolic-ref', 'HEAD', 'refs/heads/main')
+                original = (self.repo / '.git/index').read_bytes()
+                working = (self.repo / 'shared.py').read_bytes()
+                def raced(git, args):
+                    result = command(git, args)
+                    if args[0] == 'update-ref':
+                        if detached:
+                            self.git('symbolic-ref', 'HEAD', 'refs/heads/main')
+                        else:
+                            self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+                    return result
+                with mock.patch.object(core.Git, 'command', new=raced):
+                    with self.assertRaises(core.Refusal) as caught:
+                        self.land(patch)
+                self.assertEqual(caught.exception.code, 'head_race')
+                self.assertEqual(self.git('rev-parse', 'HEAD').stdout.decode().strip(), self.parent)
+                self.assertEqual(self.git('rev-parse', 'refs/heads/main').stdout.decode().strip(), self.parent)
+                self.assertEqual((self.repo / '.git/index').read_bytes(), original)
+                self.assertEqual((self.repo / 'shared.py').read_bytes(), working)
+
+    def test_prepared_detached_head_blocks_attach_and_direct_update(self):
+        patch = self.patch_for('shared.py', b'selected\n')
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        tree = self.git('rev-parse', 'HEAD^{tree}').stdout.decode().strip()
+        other = self.git('commit-tree', tree, '-p', self.parent, data=b'other writer\n').stdout.decode().strip()
+        original = (self.repo / '.git/index').read_bytes()
+        working = (self.repo / 'shared.py').read_bytes()
+        verify, attempts = core._verify_prepared_head, []
+        def intercepted(git, branch, parent):
+            attempts.append(self.git('symbolic-ref', 'HEAD', 'refs/heads/main', check=False).returncode)
+            attempts.append(self.git('update-ref', '--no-deref', 'HEAD', other, parent, check=False).returncode)
+            return verify(git, branch, parent)
+        with mock.patch.object(core, '_verify_prepared_head', new=intercepted):
+            result = self.land(patch)
+        self.assertEqual(result['status'], 'committed')
+        self.assertEqual(len(attempts), 2)
+        self.assertTrue(all(code != 0 for code in attempts))
+        self.assertEqual(self.git('symbolic-ref', '--quiet', 'HEAD', check=False).returncode, 1)
+        self.assertEqual(self.git('rev-parse', 'refs/heads/main').stdout.decode().strip(), self.parent)
+        self.assertEqual((self.repo / 'shared.py').read_bytes(), working)
+        self.assertNotEqual((self.repo / '.git/index').read_bytes(), original)
+
+    def test_detached_head_cas_preserves_competing_commit(self):
+        patch = self.patch_for('shared.py', b'selected\n')
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        tree = self.git('rev-parse', 'HEAD^{tree}').stdout.decode().strip()
+        other = self.git('commit-tree', tree, '-p', self.parent, data=b'other writer\n').stdout.decode().strip()
+        original = (self.repo / '.git/index').read_bytes()
+        working = (self.repo / 'shared.py').read_bytes()
+        publish = core._publish_ref
+        def raced(git, branch, candidate, parent):
+            self.git('update-ref', '--no-deref', 'HEAD', other, parent)
+            return publish(git, branch, candidate, parent)
+        with mock.patch.object(core, '_publish_ref', new=raced):
+            with self.assertRaises(core.Refusal) as caught:
+                self.land(patch)
+        self.assertEqual(caught.exception.code, 'ref_race')
+        self.assertEqual(self.git('rev-parse', 'HEAD').stdout.decode().strip(), other)
+        self.assertEqual(self.git('rev-parse', 'refs/heads/main').stdout.decode().strip(), self.parent)
+        self.assertEqual((self.repo / '.git/index').read_bytes(), original)
+        self.assertEqual((self.repo / 'shared.py').read_bytes(), working)
+
     def test_combined_index_read_matches_independent_binary_oracle(self) -> None:
         names = ['tab\tname.txt', 'line\n  size: 0\tflags: 8000\n.txt', 'intent.txt']
         for name in names:

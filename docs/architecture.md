@@ -2,16 +2,19 @@
 
 One Checkout turns a caller-selected, reviewed patch into one commit while
 preserving unrelated staged snapshots and all working files. Its caller is a
-person or agent that already knows the intended repository, named branch,
-exact paths and captured parent. It does not infer which edits belong to that
-caller. The [README](../README.md#try-it-before-installing) demonstrates A's
+person or agent that already knows the intended repository, named branch or
+detached HEAD, exact paths and captured parent. It does not infer which edits
+belong to that caller. The [README](../README.md#try-it-before-installing) demonstrates A's
 reviewed fix alongside B's staged work and C's unstaged edits in one file.
 
 The workflow is: validate the supplied patch against the captured parent in a
 private Git index; return a plan for review; on an authorised commit, recheck
 live state, publish through Git's native ref transaction, settle the shared
-index and return the outcome receipt. The plan binds the reviewed branch but
-reserves no state. The first branch choice still belongs to the caller.
+index and return the outcome receipt. The plan binds the reviewed HEAD identity
+but reserves no state. Choosing a named branch or detached HEAD belongs to the
+caller.
+A detached commit updates only the selected worktree's HEAD. The tool does not
+create a branch or manage a surrounding pipeline's refs, database or handoff.
 
 ## Runtime and distribution
 
@@ -43,7 +46,7 @@ live-agent reliability; see [release checks](release_checks.md) and
 | Controlled Git execution | `Git` | Resolve Git; reject inherited control variables; disable hooks, replacements and optional writes per invocation. |
 | Shared-index ownership | `GitLock` | Create `index.lock` exclusively, retain descriptor/inode ownership, publish by rename; never remove a replacement writer's lock. |
 | Candidate preparation | `commit_patch`, `_paths`, `_entries` | Apply the explicit patch to the captured parent in a private index; validate the exact path set and future shared entries. |
-| Conditional branch update | `_publish_ref`, `_verify_prepared_head` | Use Git's native prepare/commit protocol; verify the named branch and parent while prepared locks are held. |
+| Conditional ref update | `_publish_ref`, `_verify_prepared_head` | Use Git's native prepare/commit protocol; verify attached branch identity or detached HEAD and parent while prepared locks are held. |
 | Index settlement and cleanup | `commit_patch`, `LandingResources` | Settle separately after ref confirmation; preserve confirmed or uncertain outcomes when later cleanup fails. |
 | Receipt delivery | `_report_receipt`, `_emit_receipt`, `main` | Report what happened without treating a broken output stream as a failed commit. |
 
@@ -59,7 +62,7 @@ what this process knows, not what a later `rev-parse HEAD` happens to show.
 
 ```text
 validate -> capture shared index -> build candidate and next index
-         -> native start/update/prepare -> verify named branch + parent
+         -> native start/update/prepare -> verify HEAD identity + parent
                PREPARING
                    |
           mark REQUESTED before writing/flushing commit
@@ -148,9 +151,20 @@ a second failed flush. Stream-only embeddings are explicitly flushed. This is
 CLI-only handling; `commit_patch` does not alter process output streams. Both
 streams may fail or contain partial records. Missing JSON is never refusal.
 
-Recovery is inspection, not automatic retry. Compare the candidate with the
-branch and reflog, including later branch advances; inspect the staged entries,
-worktree and reported leftover resources. Neither a present candidate object
+Receipts retain `branch=refs/heads/...` for named branches. Detached receipts use
+`branch=HEAD` with explicit `head_mode=detached`; older named receipts without
+`head_mode` remain readable. Saved plans reject ambiguous or inconsistent modes
+and refuse attached/detached changes even when the parent OID stays the same.
+
+Recovery is inspection, not automatic retry. Named records inspect their recorded
+branch even if another branch is now checked out. Detached records read one
+bounded regular-file snapshot of the recorded worktree's HEAD and accept only a
+literal full commit OID. Symbolic, unreadable or unrecognised representations leave
+target equality and ancestry unknown. Recovery never follows a newly attached
+branch for that detached target. The worktree HEAD reflog remains separate history
+evidence. Compare the candidate with the recorded target and reflog,
+including later ref advances; inspect the staged entries, worktree and reported
+leftover resources. Neither a present candidate object
 nor the fact that current HEAD differs from it alone settles the question.
 
 ## Deliberate limits and regression obligations

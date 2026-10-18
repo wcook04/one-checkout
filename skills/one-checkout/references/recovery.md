@@ -12,7 +12,7 @@ receipt or killed process must be treated as unknown, not as a safe refusal.
 | `planned` (exit 0, stdout) | A candidate passed the plan checks. Branch/index were not updated. Its tree may exist only in discarded temporary object storage. | Review the patch and bindings; commit with `--plan-file` only when authorised. | Treat plan as permission, a reservation, or a persistent commit/tree object. |
 | `committed` (exit 0, stdout) | This call confirmed landing and completed its normal settlement/cleanup. | Report `new_commit`, preserve foreign work. | “Clean” the index with reset/restage; assume the branch can never advance again. |
 | `committed` with `receipt_delivery: stderr_fallback` (exit 3, stderr) | Landing and normal settlement succeeded; stdout receipt delivery failed. | Inspect the fallback and `new_commit`; do not recommit. `next_action` is `inspect_receipt_delivery`. | Relabel completion as refusal or assume index settlement failed. |
-| `landing_uncertain` (exit 3, stdout) | Request crossed the commit boundary without confirmation. Candidate SHA alone proves nothing about ref history. | Inspect candidate, the receipt's named branch, ancestry and reflog. | Blind retry, automatic rollback or “not HEAD means not committed”. |
+| `landing_uncertain` (exit 3, stdout) | Request crossed the commit boundary without confirmation. Candidate SHA alone proves nothing about ref history. | Inspect candidate, the recorded branch or detached worktree HEAD, ancestry and reflog. | Blind retry, automatic rollback or “not HEAD means not committed”. |
 | `landed_unsettled` (exit 3, stdout) | Landing was confirmed; index settlement or cleanup did not complete normally. | Inspect the known commit, branch, index and reported errors. Coordinate any repair. | Recommit A, rewind the branch, or remove locks indiscriminately. |
 
 CLI receipts add `next_action`, `automatic_retry_allowed: false` and an explicit
@@ -23,9 +23,11 @@ cleanup so they describe the final reported status.
 ## Bounded read-only inspection
 
 Resolve REPO from the saved plan/receipt and validate that PARENT/CANDIDATE are full
-hex object IDs and BRANCH is the full `refs/heads/...` value from that receipt.
-Do not interpolate untrusted JSON into `eval`. Inspect the named branch, not only
-whatever branch is currently checked out. These commands do not repair anything:
+hex object IDs. For a named receipt, BRANCH is its full `refs/heads/...` value.
+Inspect that recorded branch, even if another is now checked out. For a detached
+receipt, `branch` is exactly `HEAD` and `head_mode` is `detached`: inspect only
+the recorded worktree, not an inferred common branch. Do not interpolate untrusted
+JSON into `eval`. The named-branch commands below do not repair anything:
 
 ```sh
 git --no-replace-objects --no-optional-locks -C "$REPO" symbolic-ref --quiet HEAD
@@ -38,6 +40,17 @@ git --no-replace-objects --no-optional-locks -C "$REPO" ls-files --stage -z
 git --no-replace-objects --no-optional-locks -C "$REPO" diff \
   --cached --no-ext-diff --no-textconv --binary
 ```
+
+For detached records, prefer `recover --record-file`: it validates the recorded
+worktree/Git-directory identities. It obtains `observed_target_oid` from one
+bounded, regular-file HEAD snapshot containing a literal full commit OID, then
+compares that observation with the candidate in `candidate_is_current_target`.
+A symbolic, unreadable or unrecognised representation leaves target comparisons
+and ancestry unknown. It never follows a newly attached branch for a detached
+record, and leaves named-branch observation fields unknown. The worktree HEAD
+reflog can still provide bounded history evidence. Legacy named
+records without `head_mode` remain accepted; ambiguous `branch=HEAD` without
+explicit detached mode is refused.
 
 Compare the candidate's parent and tree to the saved receipt, and check the exact
 selected diff. If the branch has advanced, `git merge-base --is-ancestor CANDIDATE

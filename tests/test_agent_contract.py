@@ -7,6 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 import unittest
+from unittest import mock
 import test_one_checkout as fixture
 
 core = fixture.core
@@ -65,6 +66,53 @@ class AgentContract(unittest.TestCase):
         self.assertEqual(caught.exception.code, "plan_mismatch")
         self.assertIn("patch_sha256", str(caught.exception))
         self.assertEqual(self.metadata(), before)
+
+    def test_detached_plan_cannot_follow_same_oid_attachment(self):
+        self.git("update-ref", "--no-deref", "HEAD", self.parent, self.parent)
+        patch = self.selected()
+        plan = self.land(patch, dry_run=True)
+        self.git("symbolic-ref", "HEAD", "refs/heads/main")
+        before = self.metadata()
+        with self.assertRaises(core.Refusal) as caught:
+            self.land(patch, reviewed_plan=plan)
+        self.assertEqual(caught.exception.code, "plan_mismatch")
+        self.assertEqual(self.metadata(), before)
+
+    def test_attached_plan_cannot_follow_same_oid_detachment(self):
+        patch = self.selected()
+        plan = self.land(patch, dry_run=True)
+        self.git("update-ref", "--no-deref", "HEAD", self.parent, self.parent)
+        before = self.metadata()
+        with self.assertRaises(core.Refusal) as caught:
+            self.land(patch, reviewed_plan=plan)
+        self.assertEqual(caught.exception.code, "plan_mismatch")
+        self.assertEqual(self.metadata(), before)
+
+    def test_plan_head_modes_are_explicit_and_legacy_named_plans_still_work(self):
+        patch = self.selected()
+        good = self.land(patch, dry_run=True)
+        for mode, branch in (("detached", good["branch"]), ("attached", "HEAD"),
+                             (None, good["branch"]), ([], good["branch"]), (False, "HEAD")):
+            with self.subTest(mode=mode, branch=branch), self.assertRaises(core.Refusal):
+                core._validate_plan({**good, "head_mode": mode, "branch": branch})
+        with self.assertRaises(core.Refusal):
+            core._validate_plan({**{k: v for k, v in good.items() if k != "head_mode"}, "branch": "HEAD"})
+        legacy = {k: v for k, v in good.items() if k != "head_mode"}
+        self.assertEqual(self.land(patch, reviewed_plan=legacy)["status"], "committed")
+
+    def test_symbolic_nonbranch_and_symbolic_ref_errors_are_not_detached(self):
+        patch = self.selected()
+        self.git("update-ref", "refs/tags/same", self.parent)
+        self.git("symbolic-ref", "HEAD", "refs/tags/same")
+        before = self.metadata()
+        with self.assertRaises(core.Refusal):
+            self.land(patch, dry_run=True)
+        self.assertEqual(self.metadata(), before)
+        git = core.Git(self.repo)
+        with mock.patch.object(git, "run", return_value=subprocess.CompletedProcess([], 128, b"", b"failure")):
+            with self.assertRaises(core.Refusal) as caught:
+                core._head(git)
+        self.assertEqual(caught.exception.code, "head_unreadable")
 
     def test_changed_declared_paths_refuses(self):
         patch = self.selected()

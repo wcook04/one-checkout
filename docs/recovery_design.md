@@ -47,8 +47,16 @@ bindings are refused rather than guessed through.
 ## Separate observations
 
 Recovery validates the record and recorded repository identity, then asks Git
-about the recorded branch and candidate. Current HEAD alone is insufficient:
-a user may have switched branches after the attempt. Observations are separate
+about the recorded target and candidate. Named records retain their full branch
+ref, even if the caller later changes branches. Detached records bind explicit
+`head_mode=detached` and `branch=HEAD` to the recorded worktree identity. Recovery
+reads one bounded regular-file snapshot of that worktree's HEAD. Only a literal
+full commit OID supplies the detached-target observation; symbolic, unavailable
+or unrecognised content leaves it unknown. Object checks use that immutable OID,
+so an attach/detach race cannot substitute a branch OID between mode checks.
+Named-branch observation fields stay unknown for detached records.
+The recorded worktree HEAD reflog remains separate bounded history evidence.
+Legacy named records without a mode remain valid. Observations are separate
 reads, not one atomic snapshot.
 
 | Observation | What it establishes | Limit |

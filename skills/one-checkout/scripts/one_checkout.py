@@ -97,7 +97,7 @@ def _report_receipt(receipt: dict[str, object]) -> int:
                          "message": "Plan output could not be delivered; no commit was attempted."})
             return 2
         _diagnostic({**receipt, "receipt_delivery": "stderr_fallback", "receipt_output_error": str(error),
-                     "recovery": "Inspect the candidate, branch and index before any retry; stdout delivery failed."})
+                     "recovery": "Inspect the candidate, HEAD target and index before any retry; stdout delivery failed."})
         return 3
     return 3 if receipt["status"] in ("landed_unsettled", "landing_uncertain") or "record_error" in receipt else 0
 
@@ -251,7 +251,7 @@ class LandingResources(ExitStack):
             self.outcome_receipt.update(
                 status=("landing_uncertain" if self.outcome_receipt["status"] == "landing_uncertain"
                         else "landed_unsettled"), cleanup_error=str(error),
-                recovery="Inspect new_commit, the branch/reflog and leftover locks or scratch before any retry.",
+                recovery="Inspect new_commit, the HEAD target/reflog and leftover locks or scratch before any retry.",
             )
             return False
 
@@ -275,11 +275,15 @@ def _paths(values: Sequence[str]) -> list[str]:
 def _head(git: Git) -> tuple[str, str]:
     branch = git.run(["symbolic-ref", "--quiet", "HEAD"], check=False)
     ref = os.fsdecode(branch.stdout).strip()
-    if branch.returncode or not ref.startswith("refs/heads/"):
-        raise Refusal("named_branch_required", "Use a named branch with an existing commit.")
+    if branch.returncode == 1:
+        ref = "HEAD"
+    elif branch.returncode:
+        raise Refusal("head_unreadable", "Cannot establish whether HEAD is attached or detached.")
+    elif not ref.startswith("refs/heads/"):
+        raise Refusal("named_branch_required", "Symbolic HEAD must name a local branch.")
     oid = git.run(["rev-parse", "--verify", "HEAD^{commit}"], check=False)
     if oid.returncode:
-        raise Refusal("unborn_branch", "Create the initial commit before using one-checkout.")
+        raise Refusal("unborn_branch", "HEAD must resolve to an existing commit before using one-checkout.")
     return ref, os.fsdecode(oid.stdout).strip()
 
 
@@ -393,8 +397,8 @@ def _verify_prepared_head(git: Git, branch: str, parent: str) -> None:
 
 def _publish_ref(git: Git, branch: str, new_commit: str, parent: str,
                  record: RecoveryRecord | None = None) -> None:
-    # Native prepare locks both symbolic HEAD and the branch it resolved. Check
-    # that target *while locked*: two branches may legitimately share one OID.
+    # Native prepare locks HEAD and, when attached, its resolved branch. Check
+    # the target while locked: attachment can change without changing the OID.
     process = subprocess.Popen(git.command(["update-ref", "-m", "one-checkout: explicit patch", "--stdin"]),
                                cwd=git.root, env=git.env, stdin=subprocess.PIPE,
                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
@@ -403,10 +407,11 @@ def _publish_ref(git: Git, branch: str, new_commit: str, parent: str,
     progress = RefProgress.PREPARING
     outcome_error: BaseException | None = None
     try:
-        process.stdin.write(f"start\nupdate HEAD {new_commit} {parent}\nprepare\n".encode("ascii"))
+        option = "option no-deref\n" if branch == "HEAD" else ""
+        process.stdin.write(f"start\n{option}update HEAD {new_commit} {parent}\nprepare\n".encode("ascii"))
         process.stdin.flush()
         if _read_ack(process, git.timeout) != b"start: ok\n" or _read_ack(process, git.timeout) != b"prepare: ok\n":
-            raise Refusal("ref_race", "The branch changed or is locked; the patch was not landed.")
+            raise Refusal("ref_race", "The HEAD target changed or is locked; the patch was not landed.")
         _verify_prepared_head(git, branch, parent)
         if record is not None:
             record.append("requested")  # Durable conservative boundary BEFORE request delivery.
@@ -462,8 +467,11 @@ def _validate_plan(plan: object) -> dict[str, object]:
     for key in ("repository", "branch", "parent", "tree", "patch_sha256"):
         if not isinstance(plan.get(key), str) or not plan[key]:
             raise Refusal("invalid_plan", "Plan is missing a valid " + key + "; generate and review a new plan.")
-    if not Path(plan["repository"]).is_absolute() or not plan["branch"].startswith("refs/heads/"):
-        raise Refusal("invalid_plan", "Plan must name an absolute repository and a full branch ref.")
+    mode = plan.get("head_mode", "attached")
+    target_valid = (mode == "attached" and plan["branch"].startswith("refs/heads/")
+                    or mode == "detached" and plan["branch"] == "HEAD")
+    if not Path(plan["repository"]).is_absolute() or not target_valid:
+        raise Refusal("invalid_plan", "Plan must name an absolute repository and a consistent HEAD mode and target.")
     for key in ("parent", "tree"):
         if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", plan[key]):
             raise Refusal("invalid_plan", "Plan has an invalid " + key + " object ID.")
@@ -631,7 +639,7 @@ def recover_record(path: Path, *, git_timeout: float = 30.0) -> dict[str, object
             operation = event["operation_id"]
             if not isinstance(operation, str) or not re.fullmatch(r"[0-9a-f]{32}", operation):
                 raise ValueError("operation")
-            current_bindings = tuple(receipt[key] for key in
+            current_bindings = (receipt.get("head_mode", "attached"),) + tuple(receipt[key] for key in
                                      ("repository", "branch", "parent", "tree", "patch_sha256", "new_commit",
                                       "changed_paths", "repository_identity", "index_before_sha256", "index_prepared_sha256",
                                       "index_before_mtime_ns", "index_prepared_mtime_ns"))
@@ -654,8 +662,26 @@ def recover_record(path: Path, *, git_timeout: float = 30.0) -> dict[str, object
         raise Refusal("record_repository", "Repository identity changed; the record cannot describe this checkout.")
     _check_object_policy(git)
     candidate, branch = receipt["new_commit"], receipt["branch"]
-    observed = git.run(["show-ref", "--verify", "--hash", branch], check=False)
-    branch_oid = os.fsdecode(observed.stdout).strip() if observed.returncode == 0 else None
+    mode = receipt.get("head_mode", "attached")
+    branch_oid = target_oid = None
+    if mode == "detached":
+        head_data = b""
+        try:
+            descriptor = os.open(git.path("HEAD"), os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+            with os.fdopen(descriptor, "rb") as stream:
+                if stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+                    head_data = stream.read(67)  # 64 hex digits, optional CRLF, plus one excess byte.
+        except OSError:
+            pass
+        literal = re.fullmatch(rb"([0-9a-fA-F]{40}|[0-9a-fA-F]{64})(?:\r?\n)?", head_data)
+        if literal:
+            oid = literal[1].decode("ascii").lower()
+            observed = git.run(["cat-file", "-t", oid], check=False)
+            if observed.returncode == 0 and observed.stdout.strip() == b"commit":
+                target_oid = oid
+    else:
+        observed = git.run(["show-ref", "--verify", "--hash", branch], check=False)
+        branch_oid = target_oid = os.fsdecode(observed.stdout).strip() if observed.returncode == 0 else None
     object_state = git.run(["cat-file", "-t", candidate], check=False)
     available = object_state.returncode == 0 and object_state.stdout.strip() == b"commit"
     if available:
@@ -664,7 +690,7 @@ def recover_record(path: Path, *, git_timeout: float = 30.0) -> dict[str, object
         trees = [line[5:].decode("ascii") for line in headers if line.startswith(b"tree ")]
         if parents != [receipt["parent"]] or trees != [receipt["tree"]]:
             raise Refusal("record_candidate", "The actual candidate parent/tree differs from the recorded binding.")
-    ancestry = git.run(["merge-base", "--is-ancestor", candidate, branch_oid], check=False) if available and branch_oid else None
+    ancestry = git.run(["merge-base", "--is-ancestor", candidate, target_oid], check=False) if available and target_oid else None
     reflog = git.run(["reflog", "show", "-n", "1000", "--format=%H", branch], check=False)
     try:
         index_data, _, index_mtime = _index_snapshot(git.path("index"))
@@ -673,10 +699,12 @@ def recover_record(path: Path, *, git_timeout: float = 30.0) -> dict[str, object
         index_observation = None
     return {"schema": SCHEMA, "status": "recovery_observed", "repository": str(git.root),
             "operation_id": identity, "record_phase": events[-1]["phase"], "record_truncated": truncated,
-            "branch": branch, "parent": receipt["parent"], "new_commit": candidate,
+            "branch": branch, "head_mode": mode, "parent": receipt["parent"], "new_commit": candidate,
             "recorded_ref_update_confirmed": confirmed, "ref_update_confirmed": confirmed,
             "candidate_object_available": available, "observed_branch_oid": branch_oid,
-            "candidate_is_current_branch": candidate == branch_oid,
+            "candidate_is_current_branch": candidate == branch_oid if mode == "attached" else None,
+            "observed_target_oid": target_oid,
+            "candidate_is_current_target": candidate == target_oid if target_oid is not None else None,
             "candidate_is_ancestor": (ancestry.returncode == 0 if ancestry and ancestry.returncode in (0, 1) else None),
             "reflog_mentions_candidate": candidate.encode("ascii") in reflog.stdout.splitlines(),
             "reflog_limit": 1000, "index_observation": index_observation,
@@ -685,7 +713,7 @@ def recover_record(path: Path, *, git_timeout: float = 30.0) -> dict[str, object
             "index_mtime_matches_original": (index_observation["mtime_ns"] == receipt["index_before_mtime_ns"] if index_observation else None),
             "index_mtime_matches_prepared": (index_observation["mtime_ns"] == receipt["index_prepared_mtime_ns"] if index_observation else None),
             "recovery": "These separate reads are observations, not an atomic snapshot or proof of nonlanding. "
-                        "Inspect the branch, candidate and index; never retry, rewind or remove locks automatically."}
+                        "Inspect the recorded target, candidate and index; never retry, rewind or remove locks automatically."}
 
 
 def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
@@ -719,7 +747,7 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
     index = git.path("index")
     head_path = git.path("HEAD")
     if not head_path.is_file() or head_path.is_symlink():
-        raise Refusal("unsupported_head", "HEAD must be a regular symbolic-ref file.")
+        raise Refusal("unsupported_head", "HEAD must be a regular file.")
     with LandingResources() as stack:
         index_lock = None
         if not dry_run:
@@ -780,7 +808,8 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
         ]
         receipt: dict[str, object] = {
             "schema": SCHEMA, "status": "planned", "dry_run": dry_run,
-            "repository": str(git.root), "branch": branch, "parent": parent, "tree": tree,
+            "repository": str(git.root), "branch": branch,
+            "head_mode": "detached" if branch == "HEAD" else "attached", "parent": parent, "tree": tree,
             "reviewed_plan_verified": reviewed_plan is not None,
             "patch_sha256": hashlib.sha256(patch).hexdigest(), "changed_paths": changed,
             "preserved_staged_paths": preserve, "synchronized_index_paths": synchronize,
@@ -853,7 +882,7 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
             receipt.update(new_commit=new_commit,
                            status="landed_unsettled" if error.confirmed else "landing_uncertain",
                            ref_update_confirmed=error.confirmed, ref_error=str(error),
-                           recovery="Inspect new_commit and the branch/reflog before any retry; the commit request may have landed.")
+                           recovery="Inspect new_commit and the recorded target/reflog before any retry; the commit request may have landed.")
             stack.outcome_receipt = receipt
             return receipt
         receipt.update(new_commit=new_commit, status="committed", ref_update_confirmed=True)
@@ -863,7 +892,7 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
             if _index_snapshot(index) != original_snapshot:
                 raise Refusal("index_race", "The shared index changed after landing.")
             if _head(git) != (branch, new_commit):
-                raise Refusal("post_land_ref_race", "The branch changed after landing; its index was not synchronized.")
+                raise Refusal("post_land_ref_race", "The HEAD target changed after landing; its index was not synchronized.")
             if next_bytes != original:
                 index_lock.publish_index(next_bytes, index, index_mode, next_mtime_ns)
         except (OSError, Refusal, KeyboardInterrupt) as exc:
@@ -876,7 +905,7 @@ def commit_patch(*, repo: Path | str, patch: bytes, paths: Sequence[str],
                 record.append("outcome")
             except (OSError, Refusal, KeyboardInterrupt) as error:
                 receipt.update(record_error=str(error),
-                               recovery="The commit is confirmed. Recording the final outcome failed; inspect branch and index before retrying.")
+                               recovery="The commit is confirmed. Recording the final outcome failed; inspect target and index before retrying.")
         return receipt
 
 
