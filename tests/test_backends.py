@@ -1,4 +1,4 @@
-"""Bounded genuine matrix fixtures; full30-case campaign remains explicit."""
+"""Bounded genuine matrix fixtures; full60-case campaign remains explicit."""
 import importlib.util
 import os
 from pathlib import Path
@@ -16,10 +16,10 @@ SPEC.loader.exec_module(backends)
 
 @unittest.skipUnless(os.name == 'posix' and shutil.which('git'), 'requires POSIX and Git')
 class BackendTests(unittest.TestCase):
-    def test_matrix_declares_thirty_distinct_real_cases(self):
+    def test_matrix_declares_sixty_distinct_real_cases(self):
         rows = list(backends.configurations())
-        self.assertEqual(len(rows), 30)
-        self.assertEqual(len(set(rows)), 30)
+        self.assertEqual(len(rows), 60)
+        self.assertEqual(len(set(rows)), 60)
         self.assertNotIn(('reftable', 'sha1', 'packed', 'same_file'), rows)
 
     def test_native_files_backend_and_same_oid_branch_races(self):
@@ -28,7 +28,10 @@ class BackendTests(unittest.TestCase):
             tool, _ = backends.stress.freeze_runtime(backends.stress.TOOL, root)
             for number, (state, case) in enumerate((('ordinary', 'same_file'),
                                                  ('packed', 'switch_before_prepare'),
-                                                 ('linked', 'switch_while_prepared'))):
+                                                 ('linked', 'switch_while_prepared'),
+                                                 ('ordinary', 'detached_same_file'),
+                                                 ('packed', 'detached_attach_before_prepare'),
+                                                 ('linked', 'detached_attach_while_prepared'))):
                 with self.subTest(state=state, case=case):
                     created = []
                     ordinary_tempdir = tempfile.TemporaryDirectory
@@ -45,6 +48,8 @@ class BackendTests(unittest.TestCase):
                     self.assertTrue(result['checks']['index_bytes_unchanged'])
                     if state == 'linked':
                         self.assertTrue(result['gitdir_distinct_from_common'])
+                        if case.startswith('detached_'):
+                            self.assertTrue(result['checks']['primary_head_identity_unchanged'])
 
 
 if __name__ == '__main__':

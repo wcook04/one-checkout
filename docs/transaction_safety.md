@@ -1,13 +1,14 @@
 # Transaction safety and outcome contract
 
 This describes the integrated runtime, not a proof for every Git version or filesystem.
-The unit of success is an explicit patch landed on the captured named branch;
+The unit of success is an explicit patch landed on the captured branch or detached HEAD;
 it is not isolation of working files, automatic patch ownership, or proof that
 that patch builds. The caller and other writers must cooperate with Git locks.
 
 ## State and invariants
 
-Let `B` be the fully qualified captured branch, `P` its expected parent, `H`
+Let `B` be the fully qualified captured branch or the detached worktree's `HEAD`,
+with its attached/detached mode, `P` its expected parent, `H`
 the candidate commit, `I0` the locked original index, `I1` the prepared next
 index, and `W0` the original working-file bytes. Git owns ref publication;
 one-checkout owns the shared index lock by inode identity.
@@ -21,8 +22,8 @@ one-checkout owns the shared index lock by inode identity.
    Otherwise its original staged snapshot and those flags are retained.
    Unselected entries and those flags are also verified before publication.
 4. `B` and `P` are rechecked while Git's native prepared transaction protects
-   HEAD and its resolved ref. OID equality alone is insufficient: two branches
-   can point to the same commit.
+   HEAD and its resolved ref when attached. OID equality alone is insufficient:
+   two branches, or detached and attached HEAD, can point to the same commit.
 5. Once the commit request may have been delivered, an error is not evidence
    that the ref stayed unchanged. Once acknowledged, later errors cannot
    convert the result into a no-commit refusal.
@@ -120,7 +121,7 @@ No automatic settlement, rollback, lock removal or retry occurs.
 | Invariant or boundary | Executable evidence |
 |---|---|
 | A-only tree; B staged and A+B+C working bytes preserved | `tests/test_one_checkout.py::test_same_file_foreign_stage_and_unowned_hunks_survive` |
-| Exact scope, stale parent and native branch race | Original scope/parent/CAS tests and same-OID branch-switch test |
+| Exact scope, stale parent and native ref race | Scope/parent/CAS tests, same-OID branch and attached/detached switches, ordinary and linked detached worktrees |
 | Replacement hooks/objects cannot alter protocol assumptions | Original reference-hook and replace-ref regressions |
 | Known intent flags and index versions | `tests/test_transaction_safety.py` flag tests and independent `read_disk_entries` oracle |
 | Genuine sparse/split representations | New disabled-configuration fixtures and full-index split-config test |
@@ -135,6 +136,8 @@ No automatic settlement, rollback, lock removal or retry occurs.
 ordinary/linked worktrees and packed files refs using disposable repositories.
 Each supported configuration checks same-file preservation, switching between
 same-OID branches before prepare, and rejecting a symbolic switch while prepared.
+The same cases run from detached HEAD, checking that all named refs remain
+unchanged and, in linked worktrees, that the primary HEAD/index/files survive.
 Unsupported capabilities are explicit skips; exercising no cases is not success.
 Run it with `--scratch /path/to/existing/scratch --output /tmp/backends.json`.
 An executed local matrix does not establish other Git versions, network

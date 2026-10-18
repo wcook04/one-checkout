@@ -483,13 +483,61 @@ class OneCheckoutTests(unittest.TestCase):
                 self.assertEqual(caught.exception.code, "unsafe_environment")
         self.assertEqual(before, self.metadata())
 
-    def test_detached_and_split_index_refuse(self) -> None:
+    def test_detached_commit_preserves_foreign_staging_and_working_bytes(self) -> None:
+        patch = self.patch_for("shared.py", self.base.replace("line 01\n", "A selected\n").encode())
+        self.git("update-ref", "--no-deref", "HEAD", self.parent, self.parent)
+        staged = self.base.replace("line 12\n", "B staged\n").encode()
+        (self.repo / "shared.py").write_bytes(staged)
+        self.git("add", "shared.py")
+        working = staged.replace(b"line 01\n", b"A selected\n").replace(b"line 23\n", b"C unowned\n")
+        (self.repo / "shared.py").write_bytes(working)
+        (self.repo / "untracked.txt").write_bytes(b"keep this note\n")
+        before = self.metadata()
+        planned = self.land(patch, dry_run=True)
+        self.assertEqual(planned["branch"], "HEAD")
+        self.assertEqual(planned["head_mode"], "detached")
+        self.assertEqual(self.metadata(), before)
+        result = self.land(patch, reviewed_plan=planned)
+        self.assertEqual(result["status"], "committed")
+        self.assertEqual(result["head_mode"], "detached")
+        self.assertEqual(self.git("symbolic-ref", "--quiet", "HEAD", check=False).returncode, 1)
+        self.assertEqual(self.git("rev-parse", "refs/heads/main").stdout.decode().strip(), self.parent)
+        self.assertEqual(self.blob("HEAD", "shared.py"), self.base.replace("line 01\n", "A selected\n").encode())
+        self.assertEqual(self.blob("", "shared.py"), staged)
+        self.assertEqual((self.repo / "shared.py").read_bytes(), working)
+        self.assertEqual((self.repo / "untracked.txt").read_bytes(), b"keep this note\n")
+        self.assertEqual((self.repo / ".git/index").read_bytes(), before["index"])
+
+    def test_detached_linked_commit_leaves_primary_and_sibling_untouched(self) -> None:
+        primary = self.repo
+        linked, sibling = (Path(self.temp.name) / name for name in ("linked", "sibling"))
+        for target in (linked, sibling):
+            self.git("worktree", "add", "--detach", "-q", str(target), self.parent)
+        (sibling / "foreign.txt").write_bytes(b"sibling staged\n")
+        self.git("-C", str(sibling), "add", "foreign.txt")
+        (sibling / "foreign.txt").write_bytes(b"sibling working\n")
+        def other_state(path):
+            directory = Path(self.git("-C", str(path), "rev-parse", "--absolute-git-dir").stdout.decode().strip())
+            return ((directory / "HEAD").read_bytes(), (directory / "index").read_bytes(),
+                    {p.name: p.read_bytes() for p in path.iterdir() if p.is_file() and p.name != ".git"})
+        other_before = {str(p): other_state(p) for p in (primary, sibling)}
+        refs_before = self.git("for-each-ref", "--format=%(refname) %(objectname)", "refs/heads/").stdout
+        self.repo = linked
+        patch = self.patch_for("shared.py", b"selected linked patch\n")
+        (self.repo / "foreign.txt").write_bytes(b"linked staged\n")
+        self.git("add", "foreign.txt")
+        (self.repo / "foreign.txt").write_bytes(b"linked working\n")
+        result = self.land(patch)
+        self.assertEqual(result["status"], "committed")
+        self.assertEqual((result["branch"], result["head_mode"]), ("HEAD", "detached"))
+        self.assertEqual(self.blob("HEAD", "shared.py"), b"selected linked patch\n")
+        self.assertEqual(self.blob("", "foreign.txt"), b"linked staged\n")
+        self.assertEqual((self.repo / "foreign.txt").read_bytes(), b"linked working\n")
+        self.assertEqual({str(p): other_state(p) for p in (primary, sibling)}, other_before)
+        self.assertEqual(self.git("for-each-ref", "--format=%(refname) %(objectname)", "refs/heads/").stdout, refs_before)
+
+    def test_split_index_refuses(self) -> None:
         patch = self.patch_for("shared.py", b"replacement\n")
-        self.git("checkout", "--detach", "-q")
-        with self.assertRaises(core.Refusal) as caught:
-            self.land(patch)
-        self.assertEqual(caught.exception.code, "named_branch_required")
-        self.git("checkout", "main", "-q")
         self.git("update-index", "--split-index")
         with self.assertRaises(core.Refusal) as caught:
             self.land(patch)

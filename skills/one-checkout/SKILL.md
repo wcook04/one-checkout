@@ -25,9 +25,9 @@ and is refused.
 
 ## Authorise and select
 
-Establish the authorised change, target repository/branch, full parent OID,
-and evidence for the A-only patch: a reviewed supplied patch, captured edit
-record, or an isolated reconstruction from that parent. A file path, the
+Establish the authorised change, target repository and named branch or detached
+HEAD, full parent OID, and evidence for the A-only patch: a reviewed supplied
+patch, captured edit record, or an isolated reconstruction from that parent. A file path, the
 current diff, or an instruction to “commit my work” does not establish hunk
 ownership. When evidence is missing, ask for scope; do not guess.
 
@@ -50,9 +50,11 @@ python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" > "$PLAN" 2> "$ERROR"
 ```
 
-Stop on a non-zero exit. Read the patch and JSON. Check the authorised branch,
-parent and exact scope. A successful plan validates a candidate, not ownership
-or tests. Only then, with commit authorisation:
+Stop on a non-zero exit. Read the patch and JSON. Check the authorised branch
+or detached HEAD, parent and exact scope. A detached plan has `branch: "HEAD"`
+and `head_mode: "detached"`; committing it moves only that worktree's HEAD.
+It creates no branch and performs no pipeline handoff. A successful plan validates
+a candidate, not ownership or tests. Only then, with commit authorisation:
 
 ```sh
 python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
@@ -60,7 +62,7 @@ python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
   --record-file "$RECORD" --message "Describe the authorised change" > "$RECEIPT" 2> "$ERROR"
 ```
 
-`--plan-file` binds repository, branch, parent, patch bytes, paths and candidate
+`--plan-file` binds repository, HEAD identity, parent, patch bytes, paths and candidate
 tree. It does not reserve the checkout, bind the message, or grant authorisation.
 Never edit a plan or substitute a new HEAD to bypass a refusal. Review anew.
 
@@ -71,7 +73,7 @@ Never edit a plan or substitute a new HEAD to bypass a refusal. Review anew.
 | 2 / `refused` (stderr) | Read `code`; inspect the cause. No automatic retry. |
 | 0 / `planned` | Review patch and plan; no commit has landed. |
 | 0 / `committed` | Report `new_commit`. Leave other work alone. |
-| 3 / `landing_uncertain` | Candidate is not proof. Inspect the named branch/reflog before any retry. |
+| 3 / `landing_uncertain` | Candidate is not proof. Inspect the recorded branch or detached worktree HEAD and its reflog before any retry. |
 | 3 / `landed_unsettled` | Commit landed. Inspect index/cleanup; do not recommit. |
 | 3 / `committed` with `receipt_delivery` (stderr) | Stdout failed after success. Inspect the fallback; do not recommit. |
 

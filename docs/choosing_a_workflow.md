@@ -7,7 +7,7 @@ pins, licences observed, and verification limits are in [prior_art.json](prior_a
 ## When One Checkout earns its place
 
 Use it when a cooperating harness already has an authorised, parent-relative
-patch, must land it on an ordinary named branch, and must retain another
+patch, must land it on a reviewed named branch or detached HEAD, and must retain another
 collaborator's staged snapshot without writing the shared working files.
 Patch selection, authorisation and project validation are prerequisites,
 not features supplied by this command.
@@ -28,7 +28,7 @@ recovery model is what the team actually needs.
 | Choice | Established overlap | What has not been established here |
 |---|---|---|
 | Git pathspec commit | Excludes unrelated indexed paths; selects working-file contents on the named path. [S01] | A pathspec is not a same-file A-only patch selector. |
-| Git private-index plumbing | Can create an A-only commit and leave shared staging alone. [S02-S04; executable comparison] | A short recipe is not the complete lock, scope, named-branch and recovery contract. |
+| Git private-index plumbing | Can create an A-only commit and leave shared staging alone. [S02-S04; executable comparison] | A short recipe is not the complete lock, scope, HEAD-identity and recovery contract. |
 | Git worktrees / Worktrunk | Separate working trees and parallel-agent workflow management. [S08] | Worktrunk was not executed; a raw Git worktree result has not been integrated into the original branch. |
 | Agentlocks | The inspected helper leases paths/index and uses path-scoped `git add` and `git commit`. [S07] | No patch/expected-parent interface was found in that helper; this is not a claim about every interface or future version. |
 | GitButler | One workspace for parallel agents; explicit file or hunk selection and target branches. [S11-S12] | Equivalence to this tool's exact ordinary-index preservation and recovery contract needs an executed adapter. |
@@ -104,8 +104,9 @@ branches in linked worktrees. That is the requirement source, not a claim that
 its author contributed this integration, approved One Checkout or adopted it.
 The comparison's hook is independently authored for this named-branch subset;
 it does not copy the upstream hook or reproduce its detached-rebase exception.
-One Checkout still requires a named branch and does not support detached rebase
-commits.
+One Checkout supports ordinary detached HEAD, but that does not make this
+named-branch policy recipe admit detached rebase commits. Such an exception
+belongs to the project's policy and sequencer workflow; it is not inferred here.
 
 A project can apply that narrow policy to the saved plan, then use the existing
 `--plan-file` binding. Replace these absolute paths and the selected file path;
@@ -138,6 +139,10 @@ def git_path(*args):
         text=True).strip()).resolve(strict=True)
 if pathlib.Path(plan["repository"]).resolve() != root:
     raise SystemExit("Plan repository differs; review a new plan.")
+branch = plan.get("branch")
+if (not isinstance(branch, str) or not branch.startswith("refs/heads/")
+        or plan.get("head_mode", "attached") != "attached"):
+    raise SystemExit("This project policy admits named branches only.")
 primary = git_path("--absolute-git-dir") == git_path(
     "--path-format=absolute", "--git-common-dir")
 if primary and plan["branch"] != "refs/heads/main":

@@ -51,6 +51,237 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(before, self.metadata())
         self.assertEqual(evidence, self.record().read_bytes())
 
+    def test_detached_record_recovery_is_read_only_and_uses_target_fields(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        before, evidence = self.metadata(), self.record().read_bytes()
+        for _ in range(2):
+            observation = core.recover_record(self.record())
+            self.assertEqual(observation['head_mode'], 'detached')
+            self.assertEqual(observation['observed_target_oid'], result['new_commit'])
+            self.assertTrue(observation['candidate_is_current_target'])
+            self.assertIsNone(observation['observed_branch_oid'])
+            self.assertIsNone(observation['candidate_is_current_branch'])
+            self.assertTrue(observation['reflog_mentions_candidate'])
+            self.assertTrue(observation['index_matches_prepared'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_detached_record_attachment_leaves_current_target_unknown(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        self.git('update-ref', 'refs/heads/saved', result['new_commit'])
+        evidence = self.record().read_bytes()
+        for branch in ('refs/heads/saved', 'refs/heads/main'):
+            with self.subTest(branch=branch):
+                self.git('symbolic-ref', 'HEAD', branch)
+                before = self.metadata()
+                observation = core.recover_record(self.record())
+                self.assertIsNone(observation['observed_target_oid'])
+                self.assertIsNone(observation['candidate_is_current_target'])
+                self.assertIsNone(observation['candidate_is_ancestor'])
+                self.assertIsNone(observation['observed_branch_oid'])
+                self.assertIsNone(observation['candidate_is_current_branch'])
+                self.assertTrue(observation['recorded_ref_update_confirmed'])
+                self.assertEqual(self.metadata(), before)
+                self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_detached_record_later_advance_reports_ancestry(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        child = self.git('commit-tree', result['tree'], '-p', result['new_commit'],
+                         data=b'later detached commit\n').stdout.decode().strip()
+        self.git('update-ref', '--no-deref', 'HEAD', child, result['new_commit'])
+        before, evidence = self.metadata(), self.record().read_bytes()
+        observation = core.recover_record(self.record())
+        self.assertEqual(observation['observed_target_oid'], child)
+        self.assertFalse(observation['candidate_is_current_target'])
+        self.assertTrue(observation['candidate_is_ancestor'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_detached_recovery_does_not_follow_native_HEAD_ABA(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        self.git('update-ref', 'refs/heads/saved', result['new_commit'])
+        # A separate fixture writer returns detached HEAD to P. During either an
+        # unsafe HEAD resolution or a literal-OID lookup, attach at A then detach
+        # back to P. Inspection must not label the temporary branch tip current.
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, result['new_commit'])
+        run, transitions = core.Git.run, []
+        def raced(git, args, **kwargs):
+            if args in (['rev-parse', '--verify', 'HEAD^{commit}'], ['cat-file', '-t', self.parent]):
+                self.git('symbolic-ref', 'HEAD', 'refs/heads/saved')
+                try:
+                    observed = run(git, args, **kwargs)
+                finally:
+                    self.git('update-ref', '--no-deref', 'HEAD', self.parent, result['new_commit'])
+                transitions.append(args)
+                return observed
+            return run(git, args, **kwargs)
+        evidence, index = self.record().read_bytes(), (self.repo / '.git/index').read_bytes()
+        working = {p.name: p.read_bytes() for p in self.repo.iterdir() if p.is_file()}
+        with mock.patch.object(core.Git, 'run', new=raced):
+            observation = core.recover_record(self.record())
+        self.assertEqual(len(transitions), 1)
+        self.assertEqual(observation['observed_target_oid'], self.parent)
+        self.assertFalse(observation['candidate_is_current_target'])
+        self.assertFalse(observation['candidate_is_ancestor'])
+        self.assertTrue(observation['recorded_ref_update_confirmed'])
+        self.assertEqual(self.git('symbolic-ref', '--quiet', 'HEAD', check=False).returncode, 1)
+        self.assertEqual(self.git('rev-parse', 'HEAD').stdout.decode().strip(), self.parent)
+        self.assertEqual(self.git('rev-parse', 'refs/heads/saved').stdout.decode().strip(), result['new_commit'])
+        self.assertEqual(self.record().read_bytes(), evidence)
+        self.assertEqual((self.repo / '.git/index').read_bytes(), index)
+        self.assertEqual({p.name: p.read_bytes() for p in self.repo.iterdir() if p.is_file()}, working)
+
+    def test_detached_recovery_accepts_regular_literal_HEAD_snapshots(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        observed_head = Path(self.temp.name) / 'head-observation'
+        path = core.Git.path
+        def selected(git, name):
+            return observed_head if name == 'HEAD' else path(git, name)
+        before, evidence = self.metadata(), self.record().read_bytes()
+        for oid in (self.parent, result['new_commit']):
+            for ending in (b'', b'\n', b'\r\n'):
+                with self.subTest(oid=oid, ending=ending):
+                    observed_head.write_bytes(oid.encode() + ending)
+                    with mock.patch.object(core.Git, 'path', new=selected):
+                        observation = core.recover_record(self.record())
+                    self.assertEqual(observation['observed_target_oid'], oid)
+                    self.assertEqual(observation['candidate_is_current_target'], oid == result['new_commit'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_detached_recovery_malformed_missing_or_noncommit_HEAD_is_unknown(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        observed_head = Path(self.temp.name) / 'head-observation'
+        blob = self.git('hash-object', '-w', '--stdin', data=b'not a commit\n').stdout.strip()
+        oid = result['new_commit'].encode()
+        cases = (None, b'', b'ref: refs/heads/main\n', b'reftable\n', b'broken\n',
+                 oid + b'\n\n', oid + b' extra\n', b' ' + oid, oid + b'\r',
+                 b'f' * 40, b'f' * 64, blob + b'\n', b'x' * 4096)
+        path = core.Git.path
+        def selected(git, name):
+            return observed_head if name == 'HEAD' else path(git, name)
+        before, evidence = self.metadata(), self.record().read_bytes()
+        for contents in cases:
+            with self.subTest(contents=contents[:80] if contents is not None else None):
+                if observed_head.exists():
+                    observed_head.unlink()
+                if contents is not None:
+                    observed_head.write_bytes(contents)
+                with mock.patch.object(core.Git, 'path', new=selected):
+                    observation = core.recover_record(self.record())
+                self.assertIsNone(observation['observed_target_oid'])
+                self.assertIsNone(observation['candidate_is_current_target'])
+                self.assertIsNone(observation['candidate_is_ancestor'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_detached_recovery_HEAD_symlink_and_fifo_are_not_followed_or_blocked(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        result = self.commit_recorded()
+        target = Path(self.temp.name) / 'literal-head'
+        target.write_text(result['new_commit'] + '\n')
+        observed_head = Path(self.temp.name) / 'head-observation'
+        path, open_file = core.Git.path, core.os.open
+        def selected(git, name):
+            return observed_head if name == 'HEAD' else path(git, name)
+        before, evidence = self.metadata(), self.record().read_bytes()
+        for kind in ('symlink', 'fifo'):
+            with self.subTest(kind=kind):
+                if os.path.lexists(observed_head):
+                    observed_head.unlink()
+                if kind == 'symlink':
+                    observed_head.symlink_to(target)
+                else:
+                    os.mkfifo(observed_head)
+                attempts = []
+                def guarded(pathname, flags, *args, **kwargs):
+                    if Path(pathname) == observed_head:
+                        self.assertTrue(flags & os.O_NOFOLLOW)
+                        self.assertTrue(flags & os.O_NONBLOCK)
+                        attempts.append(True)
+                    return open_file(pathname, flags, *args, **kwargs)
+                with mock.patch.object(core.Git, 'path', new=selected), \
+                        mock.patch.object(core.os, 'open', new=guarded):
+                    observation = core.recover_record(self.record())
+                self.assertEqual(attempts, [True])
+                self.assertIsNone(observation['observed_target_oid'])
+                self.assertIsNone(observation['candidate_is_current_target'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
+    def test_legacy_named_records_and_inconsistent_detached_modes(self):
+        self.commit_recorded()
+        events = self.events()
+        for event in events:
+            event['receipt'].pop('head_mode', None)
+        self.write_events(events)
+        observation = core.recover_record(self.record())
+        self.assertEqual(observation['head_mode'], 'attached')
+        self.assertTrue(observation['candidate_is_current_branch'])
+        self.assertTrue(observation['candidate_is_current_target'])
+        for mode, branch in ((None, 'HEAD'), ('detached', 'HEAD'), ('detached', 'refs/heads/main'),
+                             ('attached', 'HEAD'), ([], 'HEAD')):
+            with self.subTest(mode=mode, branch=branch):
+                altered = json.loads(json.dumps(events))
+                altered[-1]['receipt'].update(head_mode=mode, branch=branch)
+                self.write_events(altered)
+                evidence, before = self.record().read_bytes(), self.metadata()
+                with self.assertRaises(core.Refusal) as caught:
+                    core.recover_record(self.record())
+                self.assertEqual(caught.exception.code, 'invalid_record')
+                self.assertEqual(self.record().read_bytes(), evidence)
+                self.assertEqual(self.metadata(), before)
+
+    def test_detached_lost_ack_remains_uncertain_while_recovery_observes_head(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        read_ack, count = core._read_ack, []
+        def lost_ack(process, timeout):
+            result = read_ack(process, timeout)
+            count.append(True)
+            return b'' if len(count) == 3 else result
+        with mock.patch.object(core, '_read_ack', new=lost_ack):
+            result = self.commit_recorded()
+        self.assertEqual(result['status'], 'landing_uncertain')
+        self.assertFalse(result['ref_update_confirmed'])
+        observation = core.recover_record(self.record())
+        self.assertFalse(observation['recorded_ref_update_confirmed'])
+        self.assertTrue(observation['candidate_is_current_target'])
+        self.assertTrue(observation['index_matches_original'])
+
+    def test_detached_post_ack_attachment_is_unsettled_without_rewinding(self):
+        self.git('update-ref', '--no-deref', 'HEAD', self.parent, self.parent)
+        original = (self.repo / '.git/index').read_bytes()
+        working = {p.name: p.read_bytes() for p in self.repo.iterdir() if p.is_file()}
+        publish = core._publish_ref
+        def attach_after_confirmation(git, branch, candidate, parent, record=None):
+            publish(git, branch, candidate, parent, record=record)
+            self.git('update-ref', 'refs/heads/after', candidate, '0' * len(parent))
+            self.git('symbolic-ref', 'HEAD', 'refs/heads/after')
+        with mock.patch.object(core, '_publish_ref', new=attach_after_confirmation):
+            result = self.commit_recorded()
+        self.assertEqual(result['status'], 'landed_unsettled')
+        self.assertTrue(result['ref_update_confirmed'])
+        self.assertEqual(result['head_mode'], 'detached')
+        self.assertEqual(self.git('rev-parse', 'refs/heads/after').stdout.decode().strip(), result['new_commit'])
+        self.assertEqual(self.git('rev-parse', 'refs/heads/main').stdout.decode().strip(), self.parent)
+        self.assertEqual(self.git('symbolic-ref', 'HEAD').stdout, b'refs/heads/after\n')
+        self.assertEqual((self.repo / '.git/index').read_bytes(), original)
+        self.assertEqual({p.name: p.read_bytes() for p in self.repo.iterdir() if p.is_file()}, working)
+        before, evidence = self.metadata(), self.record().read_bytes()
+        observation = core.recover_record(self.record())
+        self.assertTrue(observation['recorded_ref_update_confirmed'])
+        self.assertTrue(observation['index_matches_original'])
+        self.assertIsNone(observation['observed_target_oid'])
+        self.assertIsNone(observation['candidate_is_current_target'])
+        self.assertEqual(self.metadata(), before)
+        self.assertEqual(self.record().read_bytes(), evidence)
+
     def test_cli_record_and_recovery_contract(self):
         patch = Path(self.temp.name) / 'selected.patch'
         patch.write_bytes(self.patch_for('shared.py', b'selected\n'))
