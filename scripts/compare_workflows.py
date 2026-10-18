@@ -28,6 +28,20 @@ STAGED = BASE.replace(b"B = 0", b"B = 2")
 COMBINED = OWNED.replace(b"B = 0", b"B = 2")
 WORKING = COMBINED.replace(b"C = 0", b"C = 3")
 ARMS = ("git_pathspec", "git_private_index", "git_worktree", "one_checkout")
+BRANCH_POLICY_SOURCE = {
+    "url": "https://github.com/southpenlabs/agent-media/pull/153",
+    "revision": "34f82b4ab2210fae8ba1d1ef7b9499c58b6156d8",
+    "role": "named-branch policy source, not feedback authorship or adoption",
+}
+# Independently authored fixture for the named-branch subset of that policy.
+# It deliberately does not reproduce the upstream hook's detached-rebase case.
+BRANCH_POLICY_HOOK = """#!/bin/sh
+printf '%s\\n' called >> "$(dirname "$0")/calls"
+local_dir=$(git rev-parse --absolute-git-dir) || exit 1
+common_dir=$(git rev-parse --path-format=absolute --git-common-dir) || exit 1
+[ "$local_dir" != "$common_dir" ] && exit 0
+[ "$(git symbolic-ref -q HEAD)" = refs/heads/main ]
+"""
 
 
 class Fixture:
@@ -102,11 +116,15 @@ class Fixture:
             path.write_bytes(previous)
 
     def invoke(self, *, command: str = "commit", parent: str | None = None,
-               path: str = "shared.py", check: bool = True) -> subprocess.CompletedProcess[bytes]:
-        return self.run([sys.executable, "-B", "-I", str(self.tool), command,
-                         "--repo", str(self.repo), "--patch", str(self.patch), "--path", path,
-                         "--expected-parent", parent or self.parent,
-                         "--message", "selected change"], check=check)
+               path: str = "shared.py", plan_file: Path | None = None,
+               check: bool = True) -> subprocess.CompletedProcess[bytes]:
+        argv = [sys.executable, "-B", "-I", str(self.tool), command,
+                "--repo", str(self.repo), "--patch", str(self.patch), "--path", path,
+                "--expected-parent", parent or self.parent,
+                "--message", "selected change"]
+        if plan_file is not None:
+            argv.extend(["--plan-file", str(plan_file)])
+        return self.run(argv, check=check)
 
     def blob(self, treeish: str, path: str = "shared.py") -> bytes:
         return self.git("show", f"{treeish}:{path}").stdout
@@ -235,6 +253,114 @@ def candidate_dependency(f: Fixture) -> dict[str, Any]:
             "oracle_satisfied": all(checks.values()), "commands": f.commands}
 
 
+def _policy_snapshot(f: Fixture) -> dict[str, Any]:
+    # Linked worktrees have a .git file and their own index in the common repo.
+    index = Path(f.git("rev-parse", "--path-format=absolute", "--git-path", "index").stdout.decode().strip())
+    return {"head": f.git("rev-parse", "HEAD").stdout.decode().strip(),
+            "branch": f.git("symbolic-ref", "HEAD").stdout.decode().strip(),
+            "refs": dict(line.split(" ", 1) for line in f.git(
+                "for-each-ref", "--format=%(refname) %(objectname)").stdout.decode().splitlines()),
+            "index_sha256": hashlib.sha256(index.read_bytes()).hexdigest(),
+            "index_entries": f.git("ls-files", "--stage", "-z").stdout.decode(),
+            "working_sha256": {name: hashlib.sha256((f.repo / name).read_bytes()).hexdigest()
+                               for name in ("shared.py", "foreign.txt", "untracked.bin")}}
+
+
+def project_branch_admission(f: Fixture, plan: dict[str, Any]) -> dict[str, Any]:
+    """Example caller-owned metadata policy; it never executes a hook or tests code."""
+    local = Path(f.git("rev-parse", "--absolute-git-dir").stdout.decode().strip()).resolve(strict=True)
+    common = Path(f.git("rev-parse", "--path-format=absolute", "--git-common-dir").stdout.decode().strip()).resolve(strict=True)
+    repository_matches = Path(plan["repository"]).resolve() == f.repo.resolve()
+    allowed = repository_matches and (local != common or plan["branch"] == "refs/heads/main")
+    return {"allowed": allowed, "primary_checkout": local == common,
+            "repository_matches": repository_matches, "reviewed_branch": plan["branch"],
+            "reason": "allowed" if allowed else "project_branch_policy"}
+
+
+def branch_policy_control(f: Fixture, mode: str, topology: str, *, switch_branch: bool = False) -> dict[str, Any]:
+    if mode not in ("native_hook", "one_checkout_without_admission", "project_admission"):
+        raise ValueError(mode)
+    if topology == "primary_feature":
+        f.git("switch", "-q", "-c", "feature")
+    elif topology == "linked_feature":
+        linked = f.root / "linked"
+        f.git("worktree", "add", "-q", "-b", "feature", str(linked), f.parent)
+        f.repo = linked
+        (linked / "shared.py").write_bytes(STAGED)
+        (linked / "foreign.txt").write_bytes(b"foreign staged\n")
+        f.git("add", "--", "shared.py", "foreign.txt")
+        (linked / "shared.py").write_bytes(WORKING)
+        (linked / "foreign.txt").write_bytes(b"foreign unstaged\n")
+    elif topology != "primary_main":
+        raise ValueError(topology)
+    (f.repo / "untracked.bin").write_bytes(b"untracked\0fixture\n")
+    hooks = f.root / "policy-hooks"
+    hooks.mkdir()
+    hook = hooks / "pre-commit"
+    hook.write_text(BRANCH_POLICY_HOOK, encoding="utf-8")
+    hook.chmod(0o755)
+    f.git("config", "core.hooksPath", str(hooks))
+    before = _policy_snapshot(f)
+    plan = admission = receipt = None
+    checks: dict[str, bool] = {}
+    if mode == "native_hook":
+        # Fixture.git normally disables hooks; this arm explicitly enables only
+        # this trusted disposable hook. No live project's hooks are executed.
+        operation = f.run(["git", "--no-replace-objects", "-c", "core.fsmonitor=false",
+                           "-c", f"core.hooksPath={hooks}", "commit", "-q", "-m", "ordinary staged commit"],
+                          env={"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}, check=False)
+    else:
+        plan_result = f.invoke(command="plan")
+        plan = json.loads(plan_result.stdout)
+        plan_path = f.root / "reviewed-plan.json"
+        plan_path.write_bytes(plan_result.stdout)
+        checks["planning_preserves_repository"] = _policy_snapshot(f) == before
+        if mode == "project_admission":
+            admission = project_branch_admission(f, plan)
+        if switch_branch:
+            if not admission or not admission["allowed"]:
+                raise RuntimeError("branch-switch control needs an admitted plan")
+            f.git("branch", "different", f.parent)
+            f.git("symbolic-ref", "HEAD", "refs/heads/different")
+            before = _policy_snapshot(f)
+            checks["switch_preserved_parent_oid"] = before["head"] == plan["parent"]
+        operation = (f.invoke(plan_file=plan_path, check=False)
+                     if admission is None or admission["allowed"] else None)
+        if operation is not None:
+            receipt = json.loads(operation.stdout if operation.returncode == 0 else operation.stderr)
+    after = _policy_snapshot(f)
+    hook_calls = (hooks / "calls").read_text().splitlines() if (hooks / "calls").exists() else []
+    committed = operation is not None and operation.returncode == 0
+    expected_commit = not switch_branch and (topology != "primary_feature" or mode == "one_checkout_without_admission")
+    checks.update({"outcome_matches_policy_control": committed == expected_commit,
+                   "ordinary_hook_execution_matches_arm": len(hook_calls) == (1 if mode == "native_hook" else 0),
+                   "index_entries_preserved": after["index_entries"] == before["index_entries"],
+                   "working_and_untracked_bytes_preserved": after["working_sha256"] == before["working_sha256"]})
+    if committed:
+        target = before["branch"]
+        checks.update({"captured_parent_used": f.git("rev-parse", "HEAD^").stdout.decode().strip() == f.parent,
+                       "expected_commit_contents": f.blob("HEAD") == (STAGED if mode == "native_hook" else OWNED),
+                       "expected_foreign_contents": f.blob("HEAD", "foreign.txt") == (
+                           b"foreign staged\n" if mode == "native_hook" else b"foreign base\n"),
+                       "only_target_ref_advanced": after["refs"] == {**before["refs"], target: after["head"]},
+                       "branch_unchanged": after["branch"] == target})
+    else:
+        # An ordinary refused commit may refresh index stat data. Its entries
+        # must survive; our admission/runtime refusals preserve raw bytes too.
+        checks["refusal_preserves_refs_and_head"] = all(after[key] == before[key] for key in ("refs", "head", "branch"))
+        if mode != "native_hook":
+            checks["refusal_preserves_index_bytes"] = after["index_sha256"] == before["index_sha256"]
+        if switch_branch:
+            checks["saved_plan_refuses_changed_branch"] = (receipt is not None and receipt["code"] == "plan_mismatch"
+                                                          and "branch" in receipt["message"])
+    return {"scenario": f"{mode}/{topology}" + ("/same_oid_branch_switch" if switch_branch else ""),
+            "policy_source": BRANCH_POLICY_SOURCE, "mode": mode, "topology": topology,
+            "ordinary_hook_executed": bool(hook_calls), "project_metadata_policy_evaluated": admission is not None,
+            "commit_invoked": operation is not None, "return_code": operation.returncode if operation else None,
+            "plan": plan, "admission": admission, "receipt": receipt, "before": before, "after": after,
+            "checks": checks, "oracle_satisfied": all(checks.values()), "commands": f.commands}
+
+
 def comparison(tool: Path = TOOL, *, repeats: int = 3, seed: int = 7132026) -> dict[str, Any]:
     tool = tool.resolve()
     if not tool.is_file():
@@ -263,11 +389,17 @@ def comparison(tool: Path = TOOL, *, repeats: int = 3, seed: int = 7132026) -> d
         extras = [handoff(Fixture(root / "handoff-plain", tool), plain=True),
                   handoff(Fixture(root / "handoff-patch", tool), plain=False),
                   candidate_dependency(Fixture(root / "dependency", tool))]
+        policy_controls = [branch_policy_control(Fixture(root / f"policy-{mode}-{topology}", tool), mode, topology)
+                           for mode in ("native_hook", "one_checkout_without_admission", "project_admission")
+                           for topology in ("primary_main", "primary_feature", "linked_feature")]
+        policy_controls.extend(branch_policy_control(Fixture(root / f"policy-switch-{topology}", tool),
+                                                     "project_admission", topology, switch_branch=True)
+                               for topology in ("primary_main", "linked_feature"))
     medians = {f"{scenario}/{arm}": statistics.median(r["operation_seconds"] for r in results
                if r["scenario"] == scenario and r["arm"] == arm)
                for scenario in ("same_file_ABC", "independent_files_control") for arm in ARMS}
     return {"schema": "one_checkout_workflow_comparison_v1", "seed": seed, "repeats": repeats,
-            "status": "passed" if all(x["oracle_satisfied"] for x in [*results, *extras]) else "failed",
+            "status": "passed" if all(x["oracle_satisfied"] for x in [*results, *extras, *policy_controls]) else "failed",
             "environment": {"python": platform.python_version(), "platform": platform.platform(),
                             "git": subprocess.run(["git", "--version"], check=True, capture_output=True,
                                                   text=True, timeout=10).stdout.strip(),
@@ -278,8 +410,11 @@ def comparison(tool: Path = TOOL, *, repeats: int = 3, seed: int = 7132026) -> d
                             "Worktree produces an isolated branch, not an integrated shared-branch result.",
                             "No third-party application was executed; Git commands are not an Agentlocks benchmark.",
                             "Local timings exclude dependency installation and do not measure developer productivity.",
-                            "Positive hand-off is a reviewed non-overlapping fixture; index reconciliation remains manual."],
+                            "Positive hand-off is a reviewed non-overlapping fixture; index reconciliation remains manual.",
+                            "Branch policy controls use an independently authored named-branch subset of PR153; not its complete hook or rebase behavior.",
+                            "Project admission is caller-owned metadata policy, not generic hook execution, code validation or hostile-user access control."],
             "median_operation_seconds": medians, "runs": results, "handoffs_and_controls": extras,
+            "branch_policy_controls": policy_controls,
             "fixture_removed_on_exit": True}
 
 

@@ -30,6 +30,32 @@ class WorkflowComparisonTests(unittest.TestCase):
         self.assertTrue(cases['reviewed_patch_handoff']['A_survives_second_commit'])
         self.assertTrue(cases['reviewed_patch_handoff']['retained_index_still_omits_A'])
         self.assertTrue(cases['candidate_dependency_negative_control']['checks']['candidate_check_fails'])
+        policies = {r['scenario']: r for r in result['branch_policy_controls']}
+        self.assertEqual(len(policies), 11)
+        native = policies['native_hook/primary_feature']
+        self.assertTrue(native['ordinary_hook_executed'])
+        self.assertNotEqual(native['return_code'], 0)
+        bypass = policies['one_checkout_without_admission/primary_feature']
+        self.assertEqual(bypass['receipt']['status'], 'committed')
+        self.assertFalse(bypass['ordinary_hook_executed'])
+        self.assertFalse(bypass['project_metadata_policy_evaluated'])
+        denied = policies['project_admission/primary_feature']
+        self.assertFalse(denied['admission']['allowed'])
+        self.assertFalse(denied['commit_invoked'])
+        self.assertEqual(denied['before'], denied['after'])
+        for topology in ('primary_main', 'linked_feature'):
+            with self.subTest(topology=topology):
+                allowed = policies[f'project_admission/{topology}']
+                self.assertTrue(allowed['admission']['allowed'])
+                self.assertEqual(allowed['receipt']['status'], 'committed')
+                self.assertTrue(allowed['receipt']['reviewed_plan_verified'])
+                self.assertFalse(allowed['ordinary_hook_executed'])
+                switched = policies[f'project_admission/{topology}/same_oid_branch_switch']
+                self.assertEqual(switched['return_code'], 2)
+                self.assertEqual(switched['receipt']['code'], 'plan_mismatch')
+                self.assertEqual(switched['plan']['parent'], switched['before']['head'])
+                self.assertNotEqual(switched['plan']['branch'], switched['before']['branch'])
+                self.assertEqual(switched['before'], switched['after'])
 
     def test_repeat_limits_are_checked(self) -> None:
         for value in (-1, 0, 26):
