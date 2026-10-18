@@ -57,6 +57,13 @@ independent-files fixture prevents a misleading claim that pathspec Git
 commits always contaminate unrelated staging. Additional controls exercise
 an ordinary follow-on commit, a reviewed second patch, a stale parent and
 a dependency-incomplete candidate.
+`branch_policy_controls` separately compares an ordinary pre-commit branch
+guard, One Checkout without admission, and a project-owned check of a saved
+plan. Its 11 cases cover the primary checkout on `main` and a feature branch,
+a linked feature worktree, and a same-OID branch switch after plan approval.
+Both passing commits and refusals check refs, staged entries and working and
+untracked bytes. A refused native commit can refresh index stat data; the
+project admission and saved-plan refusal also require unchanged index bytes.
 
 `status: passed` means the stated observations matched their oracles. It
 does **not** mean every workflow met the isolation requirement: the ordinary
@@ -81,6 +88,77 @@ the parent, patch digest, tree, command policy and execution environment.
 A stale result must not authorise landing a different candidate. Foremerge's
 fingerprint-bound validation and recent runnable-commit research are useful
 prior art, not an implementation bundled here. [S09, S14]
+
+## Project-owned branch policy
+
+One Checkout suppresses ordinary Git hooks so a transaction cannot silently run
+arbitrary project commands or alter the candidate. This also means a pre-commit
+branch guard does not protect its plumbing commit. The comparison includes that
+bypass as a negative control; successful patch preservation alone does not make
+the operation comply with the project's policy.
+
+[agent-media PR153](https://github.com/southpenlabs/agent-media/pull/153), at
+[`34f82b4a`](https://github.com/southpenlabs/agent-media/blob/34f82b4ab2210fae8ba1d1ef7b9499c58b6156d8/.githooks/pre-commit),
+provides a concrete policy: allow `main` in the primary checkout and allow feature
+branches in linked worktrees. That is the requirement source, not a claim that
+its author contributed this integration, approved One Checkout or adopted it.
+The comparison's hook is independently authored for this named-branch subset;
+it does not copy the upstream hook or reproduce its detached-rebase exception.
+One Checkout still requires a named branch and does not support detached rebase
+commits.
+
+A project can apply that narrow policy to the saved plan, then use the existing
+`--plan-file` binding. Replace these absolute paths and the selected file path;
+the reviewed patch and plan belong outside the working checkout:
+
+```sh
+ONE_CHECKOUT=/absolute/path/to/one-checkout/skills/one-checkout/scripts/one_checkout.py
+REPO=/absolute/path/to/project
+PATCH=/absolute/path/to/reviewed.patch
+PLAN=/absolute/path/to/reviewed-plan.json
+PARENT=$(git -C "$REPO" rev-parse HEAD)
+python3 "$ONE_CHECKOUT" plan --repo "$REPO" --patch "$PATCH" \
+  --path src/file.py --expected-parent "$PARENT" > "$PLAN"
+```
+
+Review the patch, branch, parent, paths, candidate and project checks before
+authorising the next command. Keep the reviewed plan and patch unchanged. This
+example evaluates only branch metadata and runs no hook or candidate code:
+
+```sh
+python3 - "$ONE_CHECKOUT" "$REPO" "$PATCH" "$PLAN" <<'PY'
+import json, pathlib, subprocess, sys
+tool, repo, patch, plan_path = sys.argv[1:]
+root = pathlib.Path(repo).resolve(strict=True)
+plan = json.loads(pathlib.Path(plan_path).read_text(encoding="utf-8"))
+def git_path(*args):
+    return pathlib.Path(subprocess.check_output(
+        ["git", "--no-replace-objects", "-c", "core.fsmonitor=false",
+         "-c", "core.hooksPath=", "-C", str(root), "rev-parse", *args],
+        text=True).strip()).resolve(strict=True)
+if pathlib.Path(plan["repository"]).resolve() != root:
+    raise SystemExit("Plan repository differs; review a new plan.")
+primary = git_path("--absolute-git-dir") == git_path(
+    "--path-format=absolute", "--git-common-dir")
+if primary and plan["branch"] != "refs/heads/main":
+    raise SystemExit("Primary checkout policy requires main; use a worktree.")
+argv = [sys.executable, tool, "commit", "--repo", str(root), "--patch", patch,
+        "--plan-file", plan_path, "--expected-parent", plan["parent"],
+        "--message", "Apply reviewed change"]
+for path in plan["changed_paths"]:
+    argv.extend(["--path", path])
+raise SystemExit(subprocess.run(argv, check=False).returncode)
+PY
+```
+
+One Checkout validates the saved plan against the actual repository, branch,
+parent, patch digest, paths and candidate tree. A switch to another branch with
+the same parent OID still refuses. The example is a caller-owned admission
+convention, not access control against someone bypassing it or changing its
+reviewed artifacts. It neither grants authorisation nor infers branch intent,
+prevents branch switching, isolates edits/builds or implements every project
+hook. Keep code validation separate: this branch check says nothing about
+whether the candidate passes tests or meets the project's other requirements.
 
 ## Evidence that would change the recommendation
 

@@ -141,6 +141,12 @@ For independent editing environments, use Git worktrees. For a single owner's
 ordinary commit, normal Git is usually simpler. See
 [choosing a workflow](docs/choosing_a_workflow.md).
 
+One Checkout does not run ordinary Git hooks. A project that relies on a
+pre-commit branch rule must check that policy separately before committing the
+saved plan. The [project policy example](docs/choosing_a_workflow.md)
+shows a primary-checkout `main` rule with linked worktrees and an executable
+bypass control; it does not enable arbitrary hooks or validate candidate code.
+
 ## Install for Claude Code and Codex
 
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
