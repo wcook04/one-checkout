@@ -68,6 +68,26 @@ the commit rechecks the current locked snapshot instead of freezing the plan's i
 
 For an authorised commit, `--record-file /absolute/private/operation.jsonl`
 creates new append-only phase evidence outside the checkout and Git metadata.
+Its parent must already exist and have no symlink ancestors. Temporary-directory
+paths can contain platform aliases, so resolve the existing private directory
+you own before choosing a fresh record filename. For example:
+
+```sh
+RECORD_DIR=$(python3 - <<'PY'
+from pathlib import Path
+import tempfile
+
+print(Path(tempfile.mkdtemp(prefix="one-checkout-record-")).resolve(strict=True))
+PY
+)
+RECORD="$RECORD_DIR/operation.jsonl"
+```
+
+Inspect the resolved directory and confirm it is outside the checkout and Git
+metadata before committing. This creates a new private directory; it does not
+make an arbitrary existing destination safe. Do not remove symlinks or weaken
+the record-location guard to clear a refusal.
+
 Use a fresh path; an existing record is refused. The `requested` observation
 is persisted before request delivery. After interruption, run:
 

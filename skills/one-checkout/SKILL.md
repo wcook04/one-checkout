@@ -18,6 +18,11 @@ commit: use `env -u GIT_EDITOR python3 "$TOOL" ...` for a newly reviewed invocat
 Changing the launcher environment alone may not remove a host-injected variable.
 Other reported controls need their own review; never clear them all blindly.
 
+Check the actual launcher environment for each invocation: a successful direct
+`python3` plan does not validate a wrapper's later commit environment. For
+example, wrapper-injected `GIT_OPTIONAL_LOCKS=0` is still an inherited control
+and is refused.
+
 ## Authorise and select
 
 Establish the authorised change, target repository/branch, full parent OID,
@@ -35,6 +40,8 @@ Keep the patch and receipts outside the checkout, in a unique private directory.
 Use exact repository-relative files (repeat `--path`; no globs/directories).
 Capture `PARENT` once. Keep the successful plan; do not overwrite it during commit.
 Use a fresh external record path if retaining interruption evidence.
+The [recovery guide](references/recovery.md#optional-operation-record) shows how
+to create a private record parent without symlink ancestors.
 `TOOL`, `REPO`, `PATCH`, `PLAN`, `RECORD`, `RECEIPT` and `ERROR` below are absolute paths
 resolved for this task, not literal placeholder filenames.
 
