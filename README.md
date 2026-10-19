@@ -161,17 +161,18 @@ install that source version, record `git rev-parse HEAD` in the demo clone and
 run `python3 scripts/install.py --agent both --dry-run`, then the same command
 without `--dry-run` after reviewing the destination.
 
-The tagged `v0.2.0` release supports **named branches only**. It includes the
-original demo, but not detached HEAD support. Its
-[release record](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0)
+The tagged `v0.3.0` release includes detached HEAD support, the demo, the
+installed-skill inspection and first-call guidance, and the agent evaluation
+cases. Later commits on `main` may differ; its
+[release record](https://github.com/wcook04/one-checkout/releases/tag/v0.3.0)
 names the exact tested commit. To install that release, use a separate clone.
 If you just ran the demo,
 use `cd ..` first to return to its parent directory; the two source folders can
 then sit beside each other:
 
 ```sh
-git clone --branch v0.2.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.2.0
-cd one-checkout-v0.2.0
+git clone --branch v0.3.0 --depth 1 https://github.com/wcook04/one-checkout.git one-checkout-v0.3.0
+cd one-checkout-v0.3.0
 python3 scripts/install.py --agent both --dry-run
 python3 scripts/install.py --agent both
 ```
@@ -349,7 +350,7 @@ Both films are public on YouTube.
 
 ## Verify and contribute
 
-The [release](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0) links its
+The [release](https://github.com/wcook04/one-checkout/releases/tag/v0.3.0) links its
 exact tested commit and results. [CI](.github/workflows/ci.yml) exercises Linux and
 macOS, installation, native Git backends and these local checks:
 

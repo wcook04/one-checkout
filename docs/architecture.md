@@ -32,8 +32,8 @@ is removed. Repository documentation, evaluation tools and that source wrapper
 are not installed. Installation supplies files; host permissions and actual
 skill discovery are separate requirements.
 
-The tagged `v0.2.0` release and current `main` may be different source revisions.
-Use the [release record](https://github.com/wcook04/one-checkout/releases/tag/v0.2.0)
+The tagged `v0.3.0` release and current `main` may be different source revisions.
+Use the [release record](https://github.com/wcook04/one-checkout/releases/tag/v0.3.0)
 for that version's exact checks. Regression counts, installation rehearsals and
 outside synthetic replays do not establish independent project adoption or
 live-agent reliability; see [release checks](release_checks.md) and
