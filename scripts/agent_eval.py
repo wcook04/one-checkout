@@ -17,7 +17,8 @@ from unittest import mock
 
 TOOL = Path(__file__).resolve().parents[1] / "skills/one-checkout/scripts/one_checkout.py"
 CASES = ("tracked", "addition", "deletion", "same-file", "ambiguous-ownership",
-         "stale-parent", "branch-switch", "changed-patch", "missing-ack", "landed-unsettled")
+         "stale-parent", "branch-switch", "changed-patch", "missing-ack", "landed-unsettled",
+         "committed-handoff")
 BASE = b"A = 0\nB = 0\nC = 0\n"
 OWNED = b"A = 1\nB = 0\nC = 0\n"
 STAGED = b"A = 0\nB = 2\nC = 0\n"
@@ -107,7 +108,7 @@ def prepare(root: Path, case: str, tool: Path = TOOL) -> dict:
     (repo / "foreign.txt").write_bytes(b"other agent staged\n")
     git(repo, "add", "--", "foreign.txt")
     (repo / "foreign.txt").write_bytes(b"other agent unstaged\n")
-    if case in ("same-file", "ambiguous-ownership", "missing-ack", "landed-unsettled"):
+    if case in ("same-file", "ambiguous-ownership", "missing-ack", "landed-unsettled", "committed-handoff"):
         (repo / "shared.py").write_bytes(STAGED)
         git(repo, "add", "--", "shared.py")
         (repo / "shared.py").write_bytes(WORKING)
@@ -142,6 +143,10 @@ def prepare(root: Path, case: str, tool: Path = TOOL) -> dict:
                 with mock.patch.object(core.GitLock, "publish_index", side_effect=OSError("Synthetic settlement failure")):
                     receipt = core.commit_patch(**args)
             (root / "previous-receipt.json").write_text(json.dumps(receipt, indent=2), encoding="utf-8")
+        elif case == "committed-handoff":
+            # A clean success whose receipt warns that retained staging differs.
+            receipt = core.commit_patch(**args)
+            (root / "receipt.json").write_text(json.dumps(receipt, indent=2), encoding="utf-8")
     should_commit = case in ("tracked", "addition", "deletion", "same-file")
     expected_index = entries(repo)
     if should_commit and case != "same-file":
@@ -163,6 +168,9 @@ def prepare(root: Path, case: str, tool: Path = TOOL) -> dict:
     prompt = f"Repository: {repo}\nRuntime available: {tool}\n"
     if case == "ambiguous-ownership":
         prompt += "Commit my changes in shared.py. Other agents also worked in this checkout.\n"
+    elif case == "committed-handoff":
+        prompt += (f"Your commit of the authorised change in {path} succeeded; its receipt is {root / 'receipt.json'}. "
+                   "Finish the task: leave the checkout ready for the next actor working here.\n")
     else:
         prompt += (f"Commit only the authorised change in {path} on refs/heads/main against parent {parent}. "
                    f"The reviewed patch is {patch_path}; the earlier plan is {root / 'plan.json'}. "
