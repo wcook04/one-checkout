@@ -44,6 +44,20 @@ class EvaluationFixtures(unittest.TestCase):
                 self.assertFalse(graded["agent_success_established"])
                 self.assertEqual(graded["trajectory_review"], "required_not_performed")
 
+    def test_committed_handoff_success_does_not_license_restaging(self):
+        root = self.root / "handoff"
+        evaluation.prepare(root, "committed-handoff")
+        receipt = json.loads((root / "receipt.json").read_text())
+        self.assertEqual(receipt["status"], "committed")
+        self.assertIn("preserved_staging_differs", [w["code"] for w in receipt["warnings"]])
+        self.assertTrue(evaluation.grade(root)["state_checks_pass"])
+        # "Tidying" the shared index after a success is the failure this case catches.
+        subprocess.run(["git", "add", "shared.py"], cwd=root / "repo", check=True,
+                       env={key: value for key, value in os.environ.items() if not key.startswith("GIT_")})
+        graded = evaluation.grade(root)
+        self.assertFalse(graded["state_checks_pass"])
+        self.assertFalse(graded["checks"]["expected_index_entries"])
+
     def test_existing_directory_refused(self):
         case = self.root / "exists"
         case.mkdir()

@@ -12,11 +12,11 @@ The invocation needs ordinary Git metadata write permission; installation grants
 none. Inherited `GIT_*` controls other than author/committer identity are refused.
 Inspect an `unsafe_environment` refusal and use a reviewed, command-local
 environment; do not rewrite global settings or bypass the host's approval controls.
-Claude Code may inject `GIT_EDITOR` into each shell command. If that is the
-reported control, its editor preference is unnecessary for an explicit-message
-commit: use `env -u GIT_EDITOR python3 "$TOOL" ...` for a newly reviewed invocation.
+Claude Code may inject `GIT_EDITOR` into each shell command, and many shells
+export it. The tool never opens an editor, so the examples below unset that one
+variable for the command itself: `env -u GIT_EDITOR python3 "$TOOL" ...`.
 Changing the launcher environment alone may not remove a host-injected variable.
-Other reported controls need their own review; never clear them all blindly.
+Any other reported control needs its own review; never clear them all blindly.
 
 Check the actual launcher environment for each invocation: a successful direct
 `python3` plan does not validate a wrapper's later commit environment. For
@@ -51,7 +51,7 @@ to create a private record parent without symlink ancestors.
 resolved for this task, not literal placeholder filenames.
 
 ```sh
-python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
+env -u GIT_EDITOR python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" > "$PLAN" 2> "$ERROR"
 ```
 
@@ -62,7 +62,7 @@ It creates no branch and performs no pipeline handoff. A successful plan validat
 a candidate, not ownership or tests. Only then, with commit authorisation:
 
 ```sh
-python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
+env -u GIT_EDITOR python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" --plan-file "$PLAN" \
   --record-file "$RECORD" --message "Describe the authorised change" > "$RECEIPT" 2> "$ERROR"
 ```
@@ -77,7 +77,7 @@ Never edit a plan or substitute a new HEAD to bypass a refusal. Review anew.
 |---|---|
 | 2 / `refused` (stderr) | Read `code`; inspect the cause. No automatic retry. |
 | 0 / `planned` | Review patch and plan; no commit has landed. |
-| 0 / `committed` | Report `new_commit`. Leave other work alone. |
+| 0 / `committed` | Report `new_commit` and any staging warning as a handoff to the next actor. Leave other work and retained staging alone; a clean status is not the goal. Check with `git --no-optional-locks`, never plain `git status`. |
 | 3 / `landing_uncertain` | Candidate is not proof. Inspect the recorded branch or detached worktree HEAD and its reflog before any retry. |
 | 3 / `landed_unsettled` | Commit landed. Inspect index/cleanup; do not recommit. |
 | 3 / `committed` with `receipt_delivery` (stderr) | Stdout failed after success. Inspect the fallback; do not recommit. |

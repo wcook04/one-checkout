@@ -105,7 +105,7 @@ Use a fresh path; an existing record is refused. The `requested` observation
 is persisted before request delivery. After interruption, run:
 
 ```sh
-python3 "$TOOL" recover --record-file "$RECORD"
+env -u GIT_EDITOR python3 "$TOOL" recover --record-file "$RECORD"
 ```
 
 Inspection validates record/repository identity and reports candidate/ref/index

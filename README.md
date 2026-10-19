@@ -240,7 +240,7 @@ REPO=/absolute/path/to/project
 PATCH=/absolute/path/to/owned.patch
 PARENT=full_commit_SHA_the_patch_was_prepared_against
 ARTIFACTS=$(cd "$(mktemp -d)" && pwd -P)
-python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
+env -u GIT_EDITOR python3 "$TOOL" plan --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" \
   > "$ARTIFACTS/plan.json" 2> "$ARTIFACTS/plan.stderr"
 plan_exit=$?
@@ -253,7 +253,7 @@ warnings, and run required checks on the exact candidate. A plan is not
 permission to commit. Once authorised, in the same shell:
 
 ```sh
-python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
+env -u GIT_EDITOR python3 "$TOOL" commit --repo "$REPO" --patch "$PATCH" \
   --path src/example.py --expected-parent "$PARENT" \
   --plan-file "$ARTIFACTS/plan.json" --record-file "$ARTIFACTS/operation.jsonl" \
   --message "Describe the authorised change" \
