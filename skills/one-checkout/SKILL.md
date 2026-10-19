@@ -23,6 +23,11 @@ Check the actual launcher environment for each invocation: a successful direct
 example, wrapper-injected `GIT_OPTIONAL_LOCKS=0` is still an inherited control
 and is refused.
 
+Inspect a shared checkout with `git --no-optional-locks status`, never plain
+`git status`. Plain status can take the index lock and rewrite the shared index
+to refresh cached file timestamps while another writer is using it. The staged
+entries stay the same, but the file and lock do not.
+
 ## Authorise and select
 
 Establish the authorised change, target repository and named branch or detached
