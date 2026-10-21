@@ -1,47 +1,21 @@
 # One Checkout
 
-Commit one agent's fix without including another agent's unfinished edits.
+Commit a selected fix while other work stays in the same project folder.
 
-When Claude Code, Codex, or several sessions share one project folder, their edits
-can get mixed together. One Checkout commits a **reviewed patch** while preserving
-other staged changes and every working file. You decide which edits belong in it.
+Suppose Claude Code has fixed a login bug while Codex is halfway through a
+permissions change in the same file. You want to save the login fix in Git
+without including or removing the unfinished work. One Checkout takes a
+**patch you have selected and reviewed**, prepares a commit from it, and keeps
+the working files and unrelated staged changes in place.
 
-[Plectis website](https://wcook04.github.io/plectis/) ·
+It does not choose which edits belong to which agent or coordinate their writing.
+The [staging handoff](#try-it-before-installing) matters too: preserved staging
+can still contain the old code, so a later ordinary commit could undo the fix.
+
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
-[Agent skill](skills/one-checkout/SKILL.md) · [Architecture](docs/architecture.md) ·
-[Two-role trial](CONTRIBUTING.md) · [Videos](#videos)
-
-## Can I use it today?
-
-- **Usable today:** a Python CLI and a self-contained skill for Claude Code and
-  Codex, on macOS or Linux with Python 3.10+ and Git 2.39+. Supply a reviewed
-  patch, exact paths and the full parent commit it was prepared against. Plan,
-  review the reported branch or detached HEAD and candidate, run project checks,
-  then authorise the commit. The [demo below](#try-it-before-installing) is the first action.
-- **Tested:** disposable repositories exercise patch selection, retained staging,
-  unchanged working files, refusals and recovery. Installation rehearsals test
-  copied skills. These are technical checks and synthetic demonstrations;
-  [outside replay reports](CONTRIBUTING.md) remain distinct from independent
-  use on an actual project's change.
-- **Experimental or unverified:** live-agent skill discovery and use across
-  concurrent sessions. Independent project adoption is not established by these
-  tests or replay reports. Automatic edit ownership or selection is unsupported:
-  the caller must supply the reviewed patch. The
-  [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
-  from runtime correctness.
-
-The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
-for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
-to work with this repository.
-
-Improved with public feedback from **xMaxos's operator Codex** (Git-control acceptance),
-**Skitter** (staging warning and next-owner guide),
-**Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
-and executable next-commit reversal),
-**tanod** (the native post-commit staging example) and **Penny** (the question
-that prompted verification-cost measurement).
-[Contributions and source reports](CONTRIBUTING.md).
+[Watch One Checkout](https://www.youtube.com/watch?v=u79CJQYyduQ) ·
+[Plectis introduction](https://www.youtube.com/watch?v=Ut9068O-HGU) ·
+[Plectis website](https://wcook04.github.io/plectis/)
 
 ## Try it before installing
 
@@ -85,6 +59,38 @@ follow-on results for review. This is a behaviour demonstration, not a
 productivity benchmark.
 For isolated runtime measurements and their limits, see the
 [performance experiment](docs/performance.md).
+
+## Can I use it today?
+
+- **Usable today:** a Python CLI and a self-contained skill for Claude Code and
+  Codex, on macOS or Linux with Python 3.10+ and Git 2.39+. Supply a reviewed
+  patch, exact paths and the full parent commit it was prepared against. Plan,
+  review the reported branch or detached HEAD and candidate, run project checks,
+  then authorise the commit. Start with the [demo above](#try-it-before-installing).
+- **Tested:** disposable repositories exercise patch selection, retained staging,
+  unchanged working files, refusals and recovery. Installation rehearsals test
+  copied skills. These are technical checks and synthetic demonstrations;
+  [outside replay reports](CONTRIBUTING.md) remain distinct from independent
+  use on an actual project's change.
+- **Experimental or unverified:** live-agent skill discovery and use across
+  concurrent sessions. Independent project adoption is not established by these
+  tests or replay reports. Automatic edit ownership or selection is unsupported:
+  the caller must supply the reviewed patch. The
+  [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
+  from runtime correctness.
+
+The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
+for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
+to work with this repository.
+
+Improved with public feedback from **xMaxos's operator Codex** (Git-control acceptance),
+**Skitter** (staging warning and next-owner guide),
+**Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
+**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
+and executable next-commit reversal),
+**tanod** (the native post-commit staging example) and **Penny** (the question
+that prompted verification-cost measurement).
+[Contributions and source reports](CONTRIBUTING.md).
 
 ## The problem
 
@@ -386,7 +392,10 @@ AI assistance under human direction; [provenance](docs/provenance.md) records pr
 
 ## Where One Checkout fits
 
-Plectis is Will Cook’s programme of research and software built with AI agents. The aim is to make the resulting work understandable enough for other people to inspect, question and build on. One Checkout handles a practical part of agent collaboration: landing a reviewed patch without including unfinished work.
+One Checkout grew out of work with several coding-agent sessions in the
+same folder. It handles the commit step: selecting the patch, coordinating
+edits and checking the candidate remain the caller’s work. It is a standalone
+tool within Will Cook’s Plectis research and software projects.
 
 - [Safety Core](https://github.com/wcook04/safety-core) provides editable agent rules, hooks and a map of where checks apply.
 - [Plectis toolkit](https://github.com/wcook04/plectis) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/plectis/docs/system-map.html).
