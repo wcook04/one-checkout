@@ -343,8 +343,8 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 | Film | Status | What it introduces |
 |---|---|---|
-| [Introduction](https://www.youtube.com/watch?v=uO2lbstEH9M) | Public | The wider Plectis project and its tools for inspecting agent work. |
-| [One Checkout walkthrough](https://www.youtube.com/watch?v=HUciGvGo2ss) | Public | Choosing a patch, preserving unfinished edits and reviewing the staging handoff. |
+| [Introduction (v2)](https://www.youtube.com/watch?v=Ut9068O-HGU) | Public | The wider Plectis project and its tools for inspecting agent work. |
+| [One Checkout walkthrough](https://www.youtube.com/watch?v=u79CJQYyduQ) | Public | Saving a finished login fix in Git while leaving another agent’s unfinished permissions change in the working file. |
 
 Both films are public on YouTube.
 
