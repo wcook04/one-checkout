@@ -14,8 +14,7 @@ can still contain the old code, so a later ordinary commit could undo the fix.
 
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
 [Watch One Checkout](https://www.youtube.com/watch?v=hIUgqeg1_Mw) ·
-[Plectis introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w) ·
-[Plectis website](https://wcook04.github.io/plectis/)
+[Agent workflow](#use-it-with-your-agent) · [Source map](#verify-and-contribute)
 
 ## Try it before installing
 
@@ -347,12 +346,18 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 ## Videos
 
-| Film | Status | What it introduces |
-|---|---|---|
-| [Introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w) | Public | The wider Plectis project and its tools for inspecting agent work. |
-| [One Checkout walkthrough](https://www.youtube.com/watch?v=hIUgqeg1_Mw) | Public | Saving a finished login fix in Git while leaving another agent’s unfinished permissions change in the working file. |
+The [One Checkout walkthrough](https://www.youtube.com/watch?v=hIUgqeg1_Mw)
+follows a login fix from a mixed working file into its own commit, then explains
+why another agent must review the old staged copy before committing again.
 
-Both films are public on YouTube.
+| In the video | Try or inspect it here |
+|---|---|
+| Save the selected fix and leave the other edits in place | [Disposable demo and Git comparison](#try-it-before-installing) |
+| Avoid undoing that fix in the next commit | [Staging handoff](docs/staging_handoff.md) |
+| Prepare and test the proposed commit | [Patch review workflow](#review-and-commit-a-patch) and [agent skill](skills/one-checkout/SKILL.md) |
+
+The [Plectis introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w)
+places this tool alongside the other maths and software projects.
 
 ## Verify and contribute
 
@@ -399,7 +404,7 @@ tool within Will Cook’s Plectis research and software projects.
 
 - [Safety Core](https://github.com/wcook04/safety-core) provides editable agent rules, hooks and a map of where checks apply.
 - [Plectis toolkit](https://github.com/wcook04/plectis) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/plectis/docs/system-map.html).
-- [Plectis Zenith](https://github.com/wcook04/plectis-zenith) studies executable investigations, measured code repair and reusable testers; [read the research](https://wcook04.github.io/plectis-zenith/).
+- [Plectis Zenith](https://github.com/wcook04/plectis-zenith) tests whether records of earlier mistakes help an AI model find bugs in new programs. Its README separates the filmed experiment from earlier repair and tester studies.
 
 Explore the [research corpus](https://github.com/wcook04/plectis-erdos) and the [Plectis website](https://wcook04.github.io/plectis/).
 
