@@ -78,7 +78,7 @@ For isolated runtime measurements and their limits, see the
   [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
   from runtime correctness.
 
-The website is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
+The [Plectis website](https://wcook04.github.io/plectis/) is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
 to work with this repository.
 
