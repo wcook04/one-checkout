@@ -2,6 +2,10 @@
 
 Commit a selected fix while other work stays in the same project folder.
 
+[Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
+[Watch One Checkout](https://www.youtube.com/watch?v=hIUgqeg1_Mw) ·
+[Agent workflow](#use-it-with-your-agent) · [Source map](#verify-and-contribute)
+
 Suppose Claude Code has fixed a login bug while Codex is halfway through a
 permissions change in the same file. You want to save the login fix in Git
 without including or removing the unfinished work. One Checkout takes a
@@ -11,10 +15,6 @@ the working files and unrelated staged changes in place.
 It does not choose which edits belong to which agent or coordinate their writing.
 The [staging handoff](#try-it-before-installing) matters too: preserved staging
 can still contain the old code, so a later ordinary commit could undo the fix.
-
-[Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
-[Watch One Checkout](https://www.youtube.com/watch?v=hIUgqeg1_Mw) ·
-[Agent workflow](#use-it-with-your-agent) · [Source map](#verify-and-contribute)
 
 ## Try it before installing
 
