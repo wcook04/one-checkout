@@ -13,8 +13,8 @@ The [staging handoff](#try-it-before-installing) matters too: preserved staging
 can still contain the old code, so a later ordinary commit could undo the fix.
 
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
-[Watch One Checkout](https://www.youtube.com/watch?v=7Jhvcw8yshk) ·
-[Plectis introduction](https://www.youtube.com/watch?v=K87Qk0W7-lk) ·
+[Watch One Checkout](https://www.youtube.com/watch?v=hIUgqeg1_Mw) ·
+[Plectis introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w) ·
 [Plectis website](https://wcook04.github.io/plectis/)
 
 ## Try it before installing
@@ -349,8 +349,8 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 | Film | Status | What it introduces |
 |---|---|---|
-| [Introduction (v2)](https://www.youtube.com/watch?v=K87Qk0W7-lk) | Public | The wider Plectis project and its tools for inspecting agent work. |
-| [One Checkout walkthrough](https://www.youtube.com/watch?v=7Jhvcw8yshk) | Public | Saving a finished login fix in Git while leaving another agent’s unfinished permissions change in the working file. |
+| [Introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w) | Public | The wider Plectis project and its tools for inspecting agent work. |
+| [One Checkout walkthrough](https://www.youtube.com/watch?v=hIUgqeg1_Mw) | Public | Saving a finished login fix in Git while leaving another agent’s unfinished permissions change in the working file. |
 
 Both films are public on YouTube.
 
