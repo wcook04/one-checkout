@@ -78,7 +78,7 @@ For isolated runtime measurements and their limits, see the
   [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
   from runtime correctness.
 
-The [Plectis website](https://wcook04.github.io/plectis/) is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/plectis/llms.txt)
+The [Plectis website](https://wcook04.github.io/practical-formal-verification/) is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/practical-formal-verification/llms.txt)
 for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
 to work with this repository.
 
@@ -403,10 +403,10 @@ edits and checking the candidate remain the caller’s work. It is a standalone
 tool within Will Cook’s Plectis research and software projects.
 
 - [Safety Core](https://github.com/wcook04/safety-core) provides editable agent rules, hooks and a map of where checks apply.
-- [Plectis toolkit](https://github.com/wcook04/plectis) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/plectis/docs/system-map.html).
+- [Plectis toolkit](https://github.com/wcook04/practical-formal-verification) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/practical-formal-verification/docs/system-map.html).
 - [Plectis Zenith](https://github.com/wcook04/plectis-zenith) tests whether records of earlier mistakes help an AI model find bugs in new programs. Its README separates the filmed experiment from earlier repair and tester studies.
 
-Explore the [research corpus](https://github.com/wcook04/plectis-erdos) and the [Plectis website](https://wcook04.github.io/plectis/).
+Explore the [research corpus](https://github.com/wcook04/plectis-erdos) and the [Plectis website](https://wcook04.github.io/practical-formal-verification/).
 
 ## License
 
