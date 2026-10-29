@@ -3,7 +3,7 @@
 Commit a selected fix while other work stays in the same project folder.
 
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
-[Watch One Checkout](https://www.youtube.com/watch?v=hIUgqeg1_Mw) ·
+[Watch One Checkout](https://www.youtube.com/watch?v=MHBxGPLDqt4) ·
 [Agent workflow](#use-it-with-your-agent) · [Source map](#verify-and-contribute)
 
 Suppose Claude Code has fixed a login bug while Codex is halfway through a
@@ -346,7 +346,7 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 ## Videos
 
-The [One Checkout walkthrough](https://www.youtube.com/watch?v=hIUgqeg1_Mw)
+The [One Checkout walkthrough](https://www.youtube.com/watch?v=MHBxGPLDqt4)
 follows a login fix from a mixed working file into its own commit, then explains
 why another agent must review the old staged copy before committing again.
 
@@ -356,7 +356,7 @@ why another agent must review the old staged copy before committing again.
 | Avoid undoing that fix in the next commit | [Staging handoff](docs/staging_handoff.md) |
 | Prepare and test the proposed commit | [Patch review workflow](#review-and-commit-a-patch) and [agent skill](skills/one-checkout/SKILL.md) |
 
-The [Plectis introduction](https://www.youtube.com/watch?v=U1z2-XaLe_w)
+The [Plectis introduction](https://www.youtube.com/watch?v=MBmVMMogXTA)
 places this tool alongside the other maths and software projects.
 
 ## Verify and contribute
