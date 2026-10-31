@@ -9,15 +9,14 @@ No model credentials, network service, telemetry or pip installation is needed.
 From an inspected source checkout:
 
 ```sh
-python3 scripts/demo.py --human
 python3 scripts/demo.py --human --compare-git
 python3 scripts/try_install.py --human
 ```
 
-The first command prints the three states of `shared.py`, the actual staged
-diff and individual assertions. A patch containing only A is supplied; patch
-selection is not solved for you. The second executes three controls on separate,
-identical fixtures. Ordinary `git commit` commits staged content; a file-scoped
+The demo prints the three states of `shared.py`, the actual staged diff and
+individual assertions. A patch containing only A is supplied; patch selection
+is not solved for you. It also executes three controls on separate, identical
+fixtures. Ordinary `git commit` commits staged content; a file-scoped
 commit includes that file's working contents but excludes the other staged file;
 private-index Git can produce A correctly. This is not a timing benchmark.
 
@@ -31,7 +30,40 @@ All success reports appear only after cleanup completes.
 
 Set `TMPDIR` to an existing scratch directory to route runtime temporary files.
 Set `ONE_CHECKOUT_TEST_TMPDIR` for the outer demonstration and test fixtures.
+Use a physical path without symlink ancestors, outside the source checkout;
+platform aliases such as macOS `/var` can make recovery-record fixtures refuse.
 Neither option redirects an intentional installation's destination.
+
+## Demonstration evidence
+
+The [walkthrough](https://www.youtube.com/watch?v=MHBxGPLDqt4) explains the
+selected fix and staging handoff. Run the terminal demo to check the current
+source; the video and synthetic assertions do not establish live-agent efficacy.
+The default without `--human` is machine-readable JSON. A failed assertion exits
+nonzero. The evidence below belongs to this disposable evaluation path.
+
+- **A only is committed.** The [three-view regression](../tests/test_demo.py#L28)
+  and demo HEAD and changed-path assertions check this. A is explicitly
+  supplied, not recovered from intent.
+- **B's staged snapshot survives.** The demo checks its index blob, foreign-file
+  assertions and actual cached diff. The snapshot may reverse A relative to
+  the new HEAD.
+- **Unstaged work remains visible to Git.** The [index-timestamp
+  regressions](../tests/test_index_timestamps.py) and demo `diff-files` check
+  cover this. They do not lock arbitrary editors or prove every filesystem safe.
+- **A stale parent is refused.** The demo's sequential second call and existing
+  core race tests check refusal. The short demo is sequential; it is not a
+  concurrent stress test.
+- **Both hosts and both scopes contain a working runtime.** The [installation
+  rehearsal](../scripts/try_install.py) and its
+  [tests](../tests/test_try_install.py) check the copied runtimes. This is not a
+  live model, plugin-marketplace or cloud acceptance test.
+- **The first run leaves no installed footprint.** Cleanup assertions and
+  temporary routing tests check this. A deliberate real installation is a
+  different command.
+- **Git already supplies patch selection primitives.** The `--compare-git`
+  private-index positive control demonstrates this. That short control is not
+  a concurrent or recovery-safe replacement.
 
 ## Fresh committed clone, with no user installation
 
@@ -46,7 +78,7 @@ creates with `mktemp`; it does not change the original checkout.
   set -eu
   source_repo="$PWD"
   test -z "$(git status --porcelain)"
-  scratch=$(mktemp -d "${TMPDIR:-/tmp}/one-checkout-eval.XXXXXXXX")
+  scratch=$(cd "$(mktemp -d "${TMPDIR:-/tmp}/one-checkout-eval.XXXXXXXX")" && pwd -P)
   trap 'rm -rf -- "$scratch"' EXIT
   mkdir "$scratch/home" "$scratch/tmp"
   export HOME="$scratch/home" TMPDIR="$scratch/tmp"
