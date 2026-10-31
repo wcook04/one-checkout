@@ -49,6 +49,30 @@ the divergence warning. With `--compare-git`, a separate disposable fixture
 actually makes that ordinary next commit and shows A being reverted; JSON saves
 the two snapshots and commit IDs in `follow_on_control`.
 
+<details>
+<summary>Preview the demo's checked output</summary>
+
+Excerpt from `python3 scripts/demo.py --human --compare-git`:
+
+```text
+WARNING: REVIEW THE STAGING HANDOFF BEFORE ANOTHER COMMIT
+The retained index omits A; an ordinary commit of that snapshot can undo A.
+
+PASS commit_contains_only_A
+PASS staged_B_blob_unchanged
+PASS working_A_B_C_unchanged
+
+Observed next ordinary commit (separate disposable fixture):
+Before: A = 1; B = 0; C = 0
+After:  A = 0; B = 2; C = 0
+The ordinary commit actually reverted A while recording B; working bytes stayed unchanged.
+```
+
+The full output also checks a stale-parent refusal and compares three Git
+controls. Without `--human`, the command returns JSON for inspection.
+
+</details>
+
 The demo also shows that native Git can build the same A-only commit. One Checkout
 packages those primitives with scope, parent, branch, preservation and recovery
 checks. With `--compare-git`, `control_assessment` checks each Git control against
@@ -78,9 +102,11 @@ For isolated runtime measurements and their limits, see the
   [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
   from runtime correctness.
 
-The [Plectis website](https://wcook04.github.io/practical-formal-verification/) is agent-readable. Start with its [agent navigation guide](https://wcook04.github.io/practical-formal-verification/llms.txt)
-for text and JSON indexes, or use the [One Checkout skill](skills/one-checkout/SKILL.md)
-to work with this repository.
+The [One Checkout skill](skills/one-checkout/SKILL.md) supplies the agent workflow
+for this tool. For the wider collection, start at
+[Will Cook’s projects](https://wcook04.github.io/). The
+[Plectis toolkit’s agent navigation guide](https://wcook04.github.io/practical-formal-verification/llms.txt)
+indexes that separate project’s text and JSON resources.
 
 Improved with public feedback from **xMaxos's operator Codex** (Git-control acceptance),
 **Skitter** (staging warning and next-owner guide),
@@ -406,7 +432,8 @@ tool within Will Cook’s Plectis research and software projects.
 - [Plectis toolkit](https://github.com/wcook04/practical-formal-verification) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/practical-formal-verification/docs/system-map.html).
 - [Plectis Zenith](https://github.com/wcook04/plectis-zenith) tests whether records of earlier mistakes help an AI model find bugs in new programs. Its README separates the filmed experiment from earlier repair and tester studies.
 
-Explore the [research corpus](https://github.com/wcook04/plectis-erdos) and the [Plectis website](https://wcook04.github.io/practical-formal-verification/).
+Explore the [research corpus](https://github.com/wcook04/plectis-erdos), or browse
+[Will Cook’s projects](https://wcook04.github.io/) for the wider collection.
 
 ## License
 
