@@ -55,17 +55,17 @@ the two snapshots and commit IDs in `follow_on_control`.
 Excerpt from `python3 scripts/demo.py --human --compare-git`:
 
 ```text
-WARNING: REVIEW THE STAGING HANDOFF BEFORE ANOTHER COMMIT
-The retained index omits A; an ordinary commit of that snapshot can undo A.
-
 PASS commit_contains_only_A
 PASS staged_B_blob_unchanged
 PASS working_A_B_C_unchanged
+```
 
-Observed next ordinary commit (separate disposable fixture):
+The comparison then makes an ordinary next commit in a separate disposable
+fixture. A returns to zero while B is committed:
+
+```text
 Before: A = 1; B = 0; C = 0
 After:  A = 0; B = 2; C = 0
-The ordinary commit actually reverted A while recording B; working bytes stayed unchanged.
 ```
 
 The full output also checks a stale-parent refusal and compares three Git
