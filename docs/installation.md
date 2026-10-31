@@ -34,15 +34,27 @@ receipt. Symlinked source/destination ancestry is refused; the installer does
 not silently dereference dotfile links. No sudo, pip, Node, service or network
 connection is required once Python, Git and the reviewed source are available.
 
-Run the installed capability from its own location:
+Run the installed checker, called the doctor, from the destination printed by
+the installer. Choose the commands for the scope you installed.
+
+For a **user installation**:
 
 ```sh
 python3 "$HOME/.agents/skills/one-checkout/scripts/doctor.py" --self-test
 python3 "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/one-checkout/scripts/doctor.py" --self-test
 ```
 
-The doctor reports prerequisites and runs the bundled disposable demo. Neither
-command launches a model. Verify the visible skill and its source location in
+For a **project installation**, replace the project path below, then run the
+command for each host you installed:
+
+```sh
+cd /absolute/path/to/project
+python3 .agents/skills/one-checkout/scripts/doctor.py --self-test
+python3 .claude/skills/one-checkout/scripts/doctor.py --self-test
+```
+
+The doctor reports prerequisites and runs the bundled disposable demo. It does
+not launch a model. Verify the visible skill and its source location in
 the host; reload skills or start a new session if necessary. A passed doctor is
 not evidence that an agent discovered or followed the instructions.
 
