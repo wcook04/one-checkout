@@ -42,6 +42,22 @@ The repository's `AGENTS.md` guides maintenance; `SKILL.md` is the installed
 agent workflow. Host discovery is tested separately from file copying. Keep
 installed guidance self-contained instead of linking to the authoring checkout.
 
+## Documentation owners
+
+- [Evaluate before installing](evaluate.md) owns the disposable first run and
+  demonstration evidence. [Demo](demo.md) is a short run/watch entry; detailed
+  checks stay in the evaluation guide.
+- [Installation](installation.md) owns copying, upgrades and removal.
+  [Agent evaluation](agent_evaluation.md) tests host behaviour separately from
+  file installation and runtime correctness.
+- [Architecture](architecture.md), [transaction safety](transaction_safety.md)
+  and [recovery records](recovery_design.md) describe implementation boundaries.
+  The installed recovery and patch-selection references remain self-contained
+  because their readers may not have this source checkout.
+- [Staging handoff](staging_handoff.md) guides the next writer; [release
+  checks](release_checks.md) and [stress testing](stress_testing.md) guide
+  maintainers. [Provenance](provenance.md) owns source attribution.
+
 ## Adding a resource without breaking a copied skill
 
 Place real agent-facing reference material under

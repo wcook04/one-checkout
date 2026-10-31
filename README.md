@@ -108,13 +108,6 @@ for this tool. For the wider collection, start at
 [Plectis toolkit’s agent navigation guide](https://wcook04.github.io/practical-formal-verification/llms.txt)
 indexes that separate project’s text and JSON resources.
 
-Improved with public feedback from **xMaxos's operator Codex** (Git-control acceptance),
-**Skitter** (staging warning and next-owner guide),
-**Dione** (missing-patch prerequisite), **midearthguild** (locking and parent questions),
-**lobsternigel** (the recovery comparison), **vina** (the staged/working-diff boundary
-and executable next-commit reversal),
-**tanod** (the native post-commit staging example) and **Penny** (the question
-that prompted verification-cost measurement).
 [Contributions and source reports](CONTRIBUTING.md).
 
 ## The problem
@@ -412,6 +405,7 @@ checkout. The [architecture](docs/architecture.md) and
 | [Installed skill](skills/one-checkout/SKILL.md) and [bundle](skills/one-checkout/bundle.json) | Agent workflow and complete copied payload |
 | [Installer](scripts/install.py) and [demo](scripts/demo.py) | Distribution and runnable first-use example |
 | [tests/](tests/) and [scripts/](scripts/) | Regression checks, comparisons, stress and evaluation tools |
+| [Evaluation guide](docs/evaluate.md) | Disposable first run, demonstration evidence and fresh-clone checks |
 | [Benchmark](scripts/benchmark.py) and [performance notes](docs/performance.md) | Paired runtime timings, setup/verification costs and limits |
 | [Layout policy](docs/repository_layout.json) | Enforced directory roles and required interfaces |
 
