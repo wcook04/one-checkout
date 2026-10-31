@@ -1,20 +1,23 @@
 # One Checkout
 
-Commit a selected fix while other work stays in the same project folder.
+One Checkout saves a selected code change in Git while leaving other unfinished
+edits in the same project folder. A saved Git version is called a **commit**.
+
+Suppose Claude Code fixes a login bug while Codex is halfway through a
+permissions change in the same file. You want to commit the login fix without
+including or removing the unfinished work. You supply a **patch**—a file listing
+the exact changes you have selected and reviewed—and One Checkout makes that
+commit. It does not decide which edits belong to each task.
+
+Git's **staging area** contains the version prepared for the next commit.
+One Checkout preserves unrelated staged edits and all working files. Review
+that preserved staging afterwards: if it still contains the old code, the next
+ordinary commit could undo the fix. The demo shows this happening.
 
 [Try the demo](#try-it-before-installing) · [Install](#install-for-claude-code-and-codex) ·
-[Watch One Checkout](https://www.youtube.com/watch?v=MHBxGPLDqt4) ·
-[Agent workflow](#use-it-with-your-agent) · [Source map](#verify-and-contribute)
-
-Suppose Claude Code has fixed a login bug while Codex is halfway through a
-permissions change in the same file. You want to save the login fix in Git
-without including or removing the unfinished work. One Checkout takes a
-**patch you have selected and reviewed**, prepares a commit from it, and keeps
-the working files and unrelated staged changes in place.
-
-It does not choose which edits belong to which agent or coordinate their writing.
-The [staging handoff](#try-it-before-installing) matters too: preserved staging
-can still contain the old code, so a later ordinary commit could undo the fix.
+[Watch the walkthrough](https://www.youtube.com/watch?v=MHBxGPLDqt4) ·
+[Use it with an assistant](#use-it-with-your-agent) · [Source map](#verify-and-contribute) ·
+[Will Cook's projects](https://wcook04.github.io/)
 
 ## Try it before installing
 
@@ -28,26 +31,26 @@ python3 scripts/demo.py --human --compare-git
 python3 scripts/try_install.py --human
 ```
 
-Both commands use disposable fixtures. They neither install into your real home
-nor launch an AI model. The second rehearses installation for both hosts at user
-and project scope, including operation after its temporary source is removed.
+Both commands create temporary example projects. They do not install into your
+actual assistant settings or call an AI model. The second tests installation
+for Claude Code and Codex, both for one project and for all your projects. It
+also checks that the installed copy works after the temporary source is removed.
 
 The demo puts three changes in the **same file**: A is the reviewed patch,
 B is another staged change, and C is an unstaged change.
 
 | State | Before | After committing A |
 |---|---|---|
-| Latest commit (HEAD) | Base | Base + A |
-| Staged snapshot | Base + B | Base + B |
+| Latest saved version (HEAD) | Base | Base + A |
+| Version in the staging area | Base + B | Base + B |
 | Working file | Base + A + B + C | Base + A + B + C |
 
 **Review the preserved staging before the next commit.** Its snapshot can still
-lack A, so a later ordinary `git commit` can reverse A. Preservation does not
-rebase B onto A. The result identifies paths needing
-[staging review](docs/staging_handoff.md). The demo checks that its receipt emits
-the divergence warning. With `--compare-git`, a separate disposable fixture
-actually makes that ordinary next commit and shows A being reverted; JSON saves
-the two snapshots and commit IDs in `follow_on_control`.
+lack A, so a later ordinary `git commit` can reverse A. Keeping B unchanged does not combine it with A. The result identifies paths needing
+[staging review](docs/staging_handoff.md). The demo checks that its saved result warns about this difference. With `--compare-git`, a separate temporary project
+actually makes that ordinary next commit and shows A being reverted. Omit `--human` to print the detailed result as
+JSON, text with named fields. Its `follow_on_control` field contains the two
+versions and their commit identifiers.
 
 <details>
 <summary>Preview the demo's checked output</summary>
@@ -60,134 +63,70 @@ PASS staged_B_blob_unchanged
 PASS working_A_B_C_unchanged
 ```
 
-The comparison then makes an ordinary next commit in a separate disposable
-fixture. A returns to zero while B is committed:
+The comparison then makes an ordinary next commit in a separate temporary
+project. A returns to zero while B is committed:
 
 ```text
 Before: A = 1; B = 0; C = 0
 After:  A = 0; B = 2; C = 0
 ```
 
-The full output also checks a stale-parent refusal and compares three Git
-controls. Without `--human`, the command returns JSON for inspection.
+The full output also checks that the command refuses a patch prepared against
+an outdated starting version, and compares three ways to commit with Git. Without `--human`, the command returns JSON for inspection.
 
 </details>
 
-The demo also shows that native Git can build the same A-only commit. One Checkout
-packages those primitives with scope, parent, branch, preservation and recovery
-checks. With `--compare-git`, `control_assessment` checks each Git control against
-its declared outcome; some ordinary-control values are expected to be false.
-A mismatch returns a nonzero exit. Comparison JSON preserves the primary and
-follow-on results for review. This is a behaviour demonstration, not a
-productivity benchmark.
-For isolated runtime measurements and their limits, see the
-[performance experiment](docs/performance.md).
+The same selected commit can be made with Git commands. One Checkout adds
+checks that the patch changes only the specified files, still applies to the
+reviewed starting version and leaves other edits in place. The demo tests those
+behaviours; it does not measure whether the tool saves time. See the separate
+[performance experiment](docs/performance.md) for timings and their limits.
 
 ## Can I use it today?
 
-- **Usable today:** a Python CLI and a self-contained skill for Claude Code and
-  Codex, on macOS or Linux with Python 3.10+ and Git 2.39+. Supply a reviewed
-  patch, exact paths and the full parent commit it was prepared against. Plan,
-  review the reported branch or detached HEAD and candidate, run project checks,
-  then authorise the commit. Start with the [demo above](#try-it-before-installing).
-- **Tested:** disposable repositories exercise patch selection, retained staging,
-  unchanged working files, refusals and recovery. Installation rehearsals test
-  copied skills. These are technical checks and synthetic demonstrations;
-  [outside replay reports](CONTRIBUTING.md) remain distinct from independent
-  use on an actual project's change.
-- **Experimental or unverified:** live-agent skill discovery and use across
-  concurrent sessions. Independent project adoption is not established by these
-  tests or replay reports. Automatic edit ownership or selection is unsupported:
-  the caller must supply the reviewed patch. The
-  [agent evaluation guide](docs/agent_evaluation.md) separates live-agent evidence
-  from runtime correctness.
+The command-line tool and installable instructions for Claude Code and Codex
+work on macOS and Linux. Tests use temporary repositories to exercise patch
+selection, preserved edits, refusals, installation and recovery.
+[Outside test reports](CONTRIBUTING.md) are recorded separately from use on a
+real project's changes. Discovery and use of the instructions by live AI
+assistants across concurrent sessions remain experimental; these tests do not
+establish independent project adoption.
 
-The [One Checkout skill](skills/one-checkout/SKILL.md) supplies the agent workflow
-for this tool. For the wider collection, start at
-[Will Cook’s projects](https://wcook04.github.io/). The
-[Plectis toolkit’s agent navigation guide](https://wcook04.github.io/practical-formal-verification/llms.txt)
-indexes that separate project’s text and JSON resources.
-
-[Contributions and source reports](CONTRIBUTING.md).
-
-## The problem
-
-Imagine three tasks have changed the same file, `auth.py`:
-
-| Work in the file | Ready to commit? |
-|---|---|
-| Claude fixed the expired-token check | Yes: you reviewed this fix |
-| Codex started a permissions refactor | No: it is half-finished, with some edits already staged |
-| You added temporary debugging output | No: keep it local |
-
-You want a commit containing **only the token fix**. The refactor and debugging
-output need to stay exactly where they are so everyone can keep working.
-
-Git has one shared **staging area**—the changes prepared for the next commit—in
-that project folder. It does not maintain a separate staging area for each agent
-or know which task an edit belongs to. `git add .` can gather everyone's changes.
-Selecting just `auth.py` still includes multiple tasks, and an ordinary
-`git commit` includes whatever is already staged. Stashing or resetting work to
-get it out of the way changes the files or staging that other sessions are using.
-
-This is the problem One Checkout addresses: **making one specific commit from a
-folder that contains several people's or agents' unfinished changes.**
+<a id="the-problem"></a>
 
 ## What One Checkout does
 
-You or your agent prepare a patch containing exactly the change you intend to
-commit. One Checkout applies it to the captured starting commit in a separate
-Git index, checks the allowed paths, and prepares that candidate. After you
-review the plan, an authorised commit uses Git's native ref transaction to
-publish it on the reviewed branch or detached HEAD against the expected parent,
-then settles the shared staging area and returns a JSON receipt. If the parent
-or reviewed HEAD identity has changed, it refuses so you can review the new
-situation.
+You supply a reviewed patch, the exact file paths it may change, and the full
+identifier of its starting commit. That starting commit is called the
+**parent**. The tool prepares a proposed commit without changing the working
+files. You inspect its plan and run your project's checks before authorizing it.
+If the starting version or commit destination changes, the tool refuses the
+commit so you can review the new situation.
 
-The working files keep all their edits. Other people's staged snapshots stay
-staged. **Review the staging handoff:** a preserved snapshot can lack the fix you
-just committed, so a later ordinary commit could undo it. Staged and working
-diffs can therefore differ after a successful commit. The
-[handoff guide](docs/staging_handoff.md) explains the comparisons and the next
-writer's review, including a native-Git example.
+It cannot select your edits, prevent two writers overwriting each other, or
+make unfinished code correct. It also does not reserve the project while you
+review a plan. If you need separate editing folders, use
+[Git worktrees](docs/choosing_a_workflow.md). For an ordinary commit containing
+one person's work, normal Git is usually simpler.
 
-The package contains a small Python command and an installable skill for Claude
-Code and Codex. It uses Git's existing mechanisms, with explicit scope, parent,
-preservation and recovery checks.
-
-It cannot infer authorship from a mixed file, stop writers overwriting each
-other, or make unfinished code correct. If nobody retained a separate patch,
-prepare and review one without removing other edits from the shared files; see
-[patch selection](skills/one-checkout/references/patch-selection.md).
-A plan does not reserve the checkout or decide which commit target you intended.
-Review the named branch or detached HEAD explicitly. Detached commits move only
-that worktree's HEAD, without creating or advancing a named branch. The caller
-still owns keeping that commit reachable or handing it back to a pipeline. The
-tool does not reconcile retained staging onto the new commit or isolate editing,
-builds or running processes.
-For independent editing environments, use Git worktrees. For a single owner's
-ordinary commit, normal Git is usually simpler. See
-[choosing a workflow](docs/choosing_a_workflow.md).
-
-One Checkout does not run ordinary Git hooks. A project that relies on a
-pre-commit branch rule must check that policy separately before committing the
-saved plan. The [project policy example](docs/choosing_a_workflow.md)
-shows a primary-checkout `main` rule with linked worktrees and an executable
-bypass control; it does not enable arbitrary hooks or validate candidate code.
+**Git hooks are disabled for this operation.** If your project uses a hook to
+run tests or enforce a branch rule before committing, run the required check
+separately on the proposed commit. The
+[workflow guide](docs/choosing_a_workflow.md) gives an example. See
+[patch selection](skills/one-checkout/references/patch-selection.md) for preparing
+a patch and [staging handoff](docs/staging_handoff.md) for reviewing what remains.
 
 ## Install for Claude Code and Codex
 
 **Requires:** Python 3.10+, Git 2.39+, macOS or Linux. The runtime uses only the
 Python standard library and Git. It needs no server or model credentials.
 
-The demo above follows current `main`, including detached HEAD support. To
+The demo above uses the current development version on `main`. To
 install that source version, record `git rev-parse HEAD` in the demo clone and
 run `python3 scripts/install.py --agent both --dry-run`, then the same command
 without `--dry-run` after reviewing the destination.
 
-The tagged `v0.3.0` release includes detached HEAD support, the demo, the
-installed-skill inspection and first-call guidance, and the agent evaluation
-cases. Later commits on `main` may differ; its
+The tagged `v0.3.0` release includes the tool, demos and assistant instructions. Later commits on `main` may differ; its
 [release record](https://github.com/wcook04/one-checkout/releases/tag/v0.3.0)
 names the exact tested commit. To install that release, use a separate clone.
 If you just ran the demo,
@@ -203,12 +142,13 @@ python3 scripts/install.py --agent both
 
 The [installation guide](docs/installation.md) also covers upgrades and removal.
 
-The installer copies a complete skill into:
+The installer copies the Python tool and a **skill**, a set of instructions
+for an AI assistant, into:
 
 - **Codex:** `~/.agents/skills/one-checkout`
 - **Claude Code:** `~/.claude/skills/one-checkout`
 
-Choose one host with `--agent codex` or `--agent claude`. Add
+Install for just one assistant with `--agent codex` or `--agent claude`. Add
 `--scope project --project /absolute/path/to/project` for a project installation.
 A differing existing copy is refused; review the update and use
 `--backup-existing` to retain it before replacement. See
@@ -216,7 +156,7 @@ A differing existing copy is refused; review the update and use
 
 Start a fresh agent session or reload skills. The copied skill works without
 this source checkout. Installation does not change agent permissions: the host
-must permit Git metadata and external receipt-file writes. The
+must permit Git metadata and writing result files outside the project. The
 [installation guide](docs/installation.md) also covers host-injected Git variables.
 
 ## Use it with your agent
@@ -231,7 +171,7 @@ those from your reviewed change:
 > parent `<full commit SHA>`. Save the plan outside the checkout and show me
 > the branch, selected paths and staging warnings. Do not commit yet.
 
-After reviewing the successful plan and testing its exact candidate:
+After reviewing the successful plan and testing the exact proposed version:
 
 > Commit that same reviewed patch using the saved plan, with message
 > “Describe the change”. Preserve unrelated staging and all working files.
@@ -244,15 +184,15 @@ other people's edits from the shared checkout just to manufacture a patch.
 
 ## Review and commit a patch
 
-The CLI works directly from source as well as from an installed skill. It is a
-Python script; installation does not add an executable to `PATH`.
+You can also run the command directly, without an AI assistant. It is a Python
+script; installation does not add an executable to `PATH`.
 
 <details>
-<summary>Direct CLI example: plan, review, then commit</summary>
+<summary>Terminal commands: plan, review, then commit</summary>
 
-Start with an **already reviewed patch**, its original target-repository parent
-and exact file scope. Replace the example values. Keep artifacts outside the
-checkout in a fresh directory:
+Start with an **already reviewed patch**, its starting commit in the target
+project and the exact files it changes. Replace the example values. Save the
+plan and results in a fresh directory outside the project:
 
 The example uses the Codex user copy. Set `TOOL` to the source clone's absolute
 `skills/one-checkout/scripts/one_checkout.py` path for use without installation,
@@ -274,7 +214,7 @@ cat "$ARTIFACTS/plan.json" "$ARTIFACTS/plan.stderr"
 ```
 
 **Stop unless the plan exits 0.** Review its branch, parent, paths and staging
-warnings, and run required checks on the exact candidate. A plan is not
+warnings, and run required checks on the exact proposed version. A plan is not
 permission to commit. Once authorised, in the same shell:
 
 ```sh
@@ -290,22 +230,18 @@ cat "$ARTIFACTS/commit.json" "$ARTIFACTS/commit.stderr"
 
 Repeat `--path` for every exact file; globs and directories are
 refused. A saved plan binds the repository, branch, parent, patch, paths and
-candidate tree. It reserves nothing: commit checks the live state again.
+proposed file contents. It reserves nothing: commit checks the live state again.
 
 </details>
 
 ## Outcomes and recovery
 
-To compare caller knowledge with actual Git effects, run the source-checkout
-example `python3 scripts/recovery_demo.py --human`. It injects faults around real
-Git in four disposable repositories: an undelivered request, lost acknowledgement
-after delivery, failed index settlement after confirmed publication, and success.
-Both uncertain cases have a candidate commit object; only one has that commit on
-the branch. The comparison checks one commit request per case, disabled automatic
-retry, and repeated recovery that leaves repository and record bytes unchanged.
-These are sequential fault fixtures, not a scheduler or proof that a missing
-branch/reflog observation permits retry. See [transaction safety](docs/transaction_safety.md).
-
+If the operation is interrupted, the commit may have succeeded even when no
+success response arrived. The
+[recovery guide](skills/one-checkout/references/recovery.md) explains how to
+inspect the saved result without changing Git state. To see simulated failures
+and recovery in temporary repositories, run
+`python3 scripts/recovery_demo.py --human`.
 
 Keep the JSON result, stderr and exit status. The result describes what happened;
 it is not a guarantee that every later operation succeeded.
@@ -316,7 +252,7 @@ it is not a guarantee that every later operation succeeded.
 | **2** | Stop and review the refusal or plan-output error. Do not substitute a new parent to force the patch through. |
 | **3** | The commit may have landed, or a later step/output delivery failed. Inspect; **never blindly retry**. |
 
-`landing_uncertain` names a candidate without confirming publication.
+`landing_uncertain` identifies a proposed commit without confirming that it became the current commit.
 `landed_unsettled` confirms publication but reports later problems. Output failure
 can leave a fallback result on stderr; missing JSON is not proof of failure.
 The optional `--record-file` retains phase evidence, and `recover --record-file`
@@ -325,34 +261,31 @@ inspects it without changing Git state. See the
 
 ## Locking and parent checks
 
-**Does it lock the shared index?** A real commit acquires `index.lock`
-exclusively and tracks its inode. It refuses an existing lock and never removes
-a replacement writer's lock. The selected patch is applied through a separate
-private index. Git's native prepared `update-ref` transaction protects HEAD and
-its resolved branch, when attached, during publication. A plan does not reserve
-locks or state. A same-parent switch between detached and attached HEAD is also
-refused; matching commit IDs alone do not identify the target.
+During a commit, the tool locks the shared staging area and uses Git's own
+transaction mechanism to check and update the commit destination. It refuses
+an existing lock and does not remove another writer's replacement lock.
+The working files are not locked.
 
-**Where does the expected parent come from?** The caller supplies a full commit
-ID with `--expected-parent`; it is not taken from a patch header. The commit
-checks live HEAD against that captured parent, rechecks HEAD identity and the
-index while preparing, and uses Git's ref transaction to publish only against
-the expected parent. If the checkout has moved, review the patch again rather
-than substitute a new parent merely to make it pass.
+The parent identifier must come from the project you are changing. The tool
+also checks the destination: a named branch, or a **detached HEAD**, where Git
+points directly to a commit without a branch name. Matching starting commit
+identifiers do not make different destinations interchangeable. A detached
+commit does not advance a named branch; you remain responsible for keeping it
+reachable.
 
-These checks assume cooperating Git writers. Working files are not locked, and
-ref publication plus index settlement are separate steps. Inspect an uncertain
-or unsettled result before retrying. See [transaction safety](docs/transaction_safety.md).
+Updating the branch and updating shared staging are separate steps. A failure
+between them needs inspection, not an automatic retry. The
+[transaction guide](docs/transaction_safety.md) explains the sequence and limits.
 
 ## Boundaries
 
 - **Shared files are not isolated.** This command never writes or locks working
   files, infers ownership, resolves semantic conflicts, or pushes a branch.
 - **Project checks remain your responsibility.** Hooks are disabled per invocation;
-  run required policy checks and test the exact candidate separately. Configured
+  run required policy checks and test the exact proposed version separately. Configured
   commit signing is honoured.
 - **Staging is preserved selectively.** Selected entries that are unchanged from
-  the parent and have no semantic flags advance to the candidate. Foreign or flagged
+  the parent and have no special Git index flags advance to the new version. Foreign or flagged
   staged entries retain their snapshot; unrelated entries are preserved.
 - **Use trusted repositories and cooperating writers.** An existing commit and a full
   index are required; named branches and detached HEAD are supported. Split, sparse,
@@ -394,15 +327,15 @@ Tests use synthetic repositories. Set `TMPDIR` and `ONE_CHECKOUT_TEST_TMPDIR` to
 existing scratch directories if needed. See [release checks](docs/release_checks.md),
 [agent evaluation](docs/agent_evaluation.md) and [stress testing](docs/stress_testing.md).
 
-The architecture has **one runtime and one installable bundle**. The installer
-copies it to each host; development tools and repository docs stay in the source
+There is **one copy of the Python tool and assistant instructions in the source**.
+The installer copies them to each assistant; development tools and repository docs stay in the source
 checkout. The [architecture](docs/architecture.md) and
 [repository guide](docs/repository_guide.md) explain the ownership boundaries.
 
 | Source | Responsibility |
 |---|---|
-| [Runtime](skills/one-checkout/scripts/one_checkout.py) | Git validation, candidate preparation, publication, staging and result delivery |
-| [Installed skill](skills/one-checkout/SKILL.md) and [bundle](skills/one-checkout/bundle.json) | Agent workflow and complete copied payload |
+| [Runtime](skills/one-checkout/scripts/one_checkout.py) | Checks the Git state, prepares the selected commit, saves it and reports the outcome |
+| [Installed skill](skills/one-checkout/SKILL.md) and [bundle](skills/one-checkout/bundle.json) | Assistant instructions and the list of files copied by the installer |
 | [Installer](scripts/install.py) and [demo](scripts/demo.py) | Distribution and runnable first-use example |
 | [tests/](tests/) and [scripts/](scripts/) | Regression checks, comparisons, stress and evaluation tools |
 | [Evaluation guide](docs/evaluate.md) | Disposable first run, demonstration evidence and fresh-clone checks |
@@ -419,12 +352,12 @@ AI assistance under human direction; [provenance](docs/provenance.md) records pr
 
 One Checkout grew out of work with several coding-agent sessions in the
 same folder. It handles the commit step: selecting the patch, coordinating
-edits and checking the candidate remain the caller’s work. It is a standalone
+edits and checking the proposed version remain the caller’s work. It is a standalone
 tool within Will Cook’s Plectis research and software projects.
 
-- [Safety Core](https://github.com/wcook04/safety-core) provides editable agent rules, hooks and a map of where checks apply.
+- [Safety Core](https://github.com/wcook04/safety-core) provides instructions and automatic checks for AI coding assistants, with a map of which files they apply to.
 - [Plectis toolkit](https://github.com/wcook04/practical-formal-verification) contains earlier Python components and worked examples; [explore its software map](https://wcook04.github.io/practical-formal-verification/docs/system-map.html).
-- [Plectis Zenith](https://github.com/wcook04/plectis-zenith) tests whether records of earlier mistakes help an AI model find bugs in new programs. Its README separates the filmed experiment from earlier repair and tester studies.
+- [Plectis Zenith](https://github.com/wcook04/plectis-zenith) tests whether records of earlier mistakes help an AI model find bugs in new programs. Its README separates the experiment shown in the video from earlier repair and tester studies.
 
 Explore the [research corpus](https://github.com/wcook04/plectis-erdos), or browse
 [Will Cook’s projects](https://wcook04.github.io/) for the wider collection.
