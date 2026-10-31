@@ -42,15 +42,28 @@ source; the video and synthetic assertions do not establish live-agent efficacy.
 The default without `--human` is machine-readable JSON. A failed assertion exits
 nonzero. The evidence below belongs to this disposable evaluation path.
 
-| Claim | Runnable evidence | Important limit |
-|---|---|---|
-| A only is committed | `test_demo.DemoTests.test_exact_three_views_and_observed_diff`; demo HEAD and changed-path assertions | A is explicitly supplied, not recovered from intent |
-| B's staged snapshot survives | Demo index blob, foreign-file assertions and actual cached diff | The snapshot may reverse A relative to the new HEAD |
-| Unstaged work remains visible to Git | `test_index_timestamps.py`; demo `diff-files` check | This does not lock arbitrary editors or prove every filesystem safe |
-| A stale parent refuses | Demo's sequential second call and existing core race tests | The short demo is sequential; it is not a concurrent stress test |
-| Both hosts and both scopes contain a working runtime | `scripts/try_install.py`; `tests/test_try_install.py` | No live model, plugin-marketplace or cloud acceptance test |
-| First-run leaves no installed footprint | Cleanup assertions and temporary routing tests | A deliberate real installation is a different command |
-| Git already supplies patch selection primitives | `--compare-git` private-index positive control | That short control is not a concurrent/recovery-safe replacement |
+- **A only is committed.** The [three-view regression](../tests/test_demo.py#L28)
+  and demo HEAD and changed-path assertions check this. A is explicitly
+  supplied, not recovered from intent.
+- **B's staged snapshot survives.** The demo checks its index blob, foreign-file
+  assertions and actual cached diff. The snapshot may reverse A relative to
+  the new HEAD.
+- **Unstaged work remains visible to Git.** The [index-timestamp
+  regressions](../tests/test_index_timestamps.py) and demo `diff-files` check
+  cover this. They do not lock arbitrary editors or prove every filesystem safe.
+- **A stale parent is refused.** The demo's sequential second call and existing
+  core race tests check refusal. The short demo is sequential; it is not a
+  concurrent stress test.
+- **Both hosts and both scopes contain a working runtime.** The [installation
+  rehearsal](../scripts/try_install.py) and its
+  [tests](../tests/test_try_install.py) check the copied runtimes. This is not a
+  live model, plugin-marketplace or cloud acceptance test.
+- **The first run leaves no installed footprint.** Cleanup assertions and
+  temporary routing tests check this. A deliberate real installation is a
+  different command.
+- **Git already supplies patch selection primitives.** The `--compare-git`
+  private-index positive control demonstrates this. That short control is not
+  a concurrent or recovery-safe replacement.
 
 ## Fresh committed clone, with no user installation
 
