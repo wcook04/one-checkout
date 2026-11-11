@@ -298,6 +298,8 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 ## Videos
 
+[Introduction to the projects](https://www.youtube.com/watch?v=Yk_kUQUCylc) · [One Checkout short](https://www.youtube.com/watch?v=CiaQ0P7o6Fg)
+
 The [One Checkout walkthrough](https://www.youtube.com/watch?v=MHBxGPLDqt4)
 follows a login fix from a mixed working file into its own commit, then explains
 why another agent must review the old staged copy before committing again.
@@ -307,9 +309,6 @@ why another agent must review the old staged copy before committing again.
 | Save the selected fix and leave the other edits in place | [Disposable demo and Git comparison](#try-it-before-installing) |
 | Avoid undoing that fix in the next commit | [Staging handoff](docs/staging_handoff.md) |
 | Prepare and test the proposed commit | [Patch review workflow](#review-and-commit-a-patch) and [agent skill](skills/one-checkout/SKILL.md) |
-
-The [Plectis introduction](https://www.youtube.com/watch?v=MBmVMMogXTA)
-places this tool alongside the other maths and software projects.
 
 ## Verify and contribute
 
