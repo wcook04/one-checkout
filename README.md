@@ -298,7 +298,7 @@ Read [transaction safety](docs/transaction_safety.md) and
 
 ## Videos
 
-[Introduction to the projects](https://www.youtube.com/watch?v=Yk_kUQUCylc) · [One Checkout short](https://www.youtube.com/watch?v=CiaQ0P7o6Fg)
+[Introduction to the projects](https://www.youtube.com/watch?v=FwgaZYH2otY) · [One Checkout short](https://www.youtube.com/watch?v=BBIYeaXf6GM)
 
 The [One Checkout walkthrough](https://www.youtube.com/watch?v=MHBxGPLDqt4)
 follows a login fix from a mixed working file into its own commit, then explains
